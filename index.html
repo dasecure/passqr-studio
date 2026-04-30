@@ -1,9 +1,479 @@
-// ── Images push ───────────────────────────────────────────────────────────────
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="theme-color" content="#070B14" />
+<title>PassQR Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+:root{--bg:#070B14;--surface:#0D1221;--surface2:#131828;--border:#1C2540;--border2:#263055;--text:#E2E8F4;--muted:#5A6A8E;--accent:#4F7EFF;--accent2:#7B9FFF;--green:#00D68F;--red:#FF4D6D;--amber:#FFB347;--font-sans:'DM Sans',sans-serif;--font-mono:'JetBrains Mono',monospace;--font-disp:'Syne',sans-serif;--radius:10px;--shadow:0 4px 24px rgba(0,0,0,0.4);--header-h:56px;--bottom-nav-h:60px;--safe-bottom:env(safe-area-inset-bottom,0px);--safe-top:env(safe-area-inset-top,0px);}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;overscroll-behavior:none;background:var(--bg);color:var(--text);font-family:var(--font-sans);line-height:1.6;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;}
+#app{display:flex;flex-direction:column;height:100dvh;height:100vh;overflow:hidden;padding-top:var(--safe-top);}
+header{flex-shrink:0;height:var(--header-h);background:rgba(7,11,20,0.96);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;z-index:100;}
+.logo{font-family:var(--font-disp);font-size:1rem;font-weight:800;color:var(--text);text-decoration:none;display:flex;align-items:center;gap:8px;margin-right:20px;white-space:nowrap;flex-shrink:0;}
+.logo-mark{width:28px;height:28px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:0.8rem;}
+.top-nav{display:flex;gap:2px;flex:1;overflow-x:auto;scrollbar-width:none;}
+.top-nav::-webkit-scrollbar{display:none;}
+.tab-btn{padding:6px 14px;background:none;border:none;cursor:pointer;color:var(--muted);font-family:var(--font-sans);font-size:0.85rem;font-weight:500;border-radius:var(--radius);transition:all 0.15s ease;position:relative;white-space:nowrap;min-height:36px;}
+.tab-btn:hover{color:var(--text);background:var(--surface);}
+.tab-btn.active{color:var(--accent2);background:rgba(79,126,255,0.1);}
+.tab-btn.active::after{content:'';position:absolute;bottom:-1px;left:14px;right:14px;height:2px;background:var(--accent);border-radius:2px;}
+.demo-badge{display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:0.65rem;text-transform:uppercase;letter-spacing:0.06em;padding:4px 9px;border-radius:20px;background:rgba(0,214,143,0.1);color:var(--green);border:1px solid rgba(0,214,143,0.25);white-space:nowrap;flex-shrink:0;margin-left:auto;}
+#view{flex:1;position:relative;overflow:hidden;min-height:0;}
+.tab-panel{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;display:none;padding:20px 16px 32px;}
+.tab-panel.active{display:block;}
+@media(min-width:640px){.tab-panel{padding:28px 24px 40px;}}
+@media(max-width:767px){.tab-panel{padding-bottom:calc(32px + var(--bottom-nav-h) + var(--safe-bottom));}}
+.tab-panel::-webkit-scrollbar{width:4px;}
+.tab-panel::-webkit-scrollbar-track{background:transparent;}
+.tab-panel::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+#bottom-nav{display:none;flex-shrink:0;height:calc(var(--bottom-nav-h) + var(--safe-bottom));padding-bottom:var(--safe-bottom);background:rgba(13,18,33,0.98);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--border);z-index:100;}
+.bottom-nav-inner{display:flex;height:var(--bottom-nav-h);}
+.bnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:none;border:none;cursor:pointer;color:var(--muted);font-family:var(--font-sans);font-size:0.65rem;font-weight:500;transition:color 0.15s;padding:6px 4px;min-height:44px;}
+.bnav-btn .icon{font-size:1.3rem;line-height:1;transition:transform 0.15s;}
+.bnav-btn.active{color:var(--accent2);}
+.bnav-btn.active .icon{transform:scale(1.15);}
+.bnav-btn:active{opacity:0.7;}
+@media(max-width:767px){.top-nav{display:none;}#bottom-nav{display:block;}}
+.grid-2{display:grid;grid-template-columns:1fr 380px;gap:20px;align-items:start;max-width:1100px;margin:0 auto;}
+@media(max-width:960px){.grid-2{grid-template-columns:1fr;}}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+.card-header{padding:14px 16px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+.card-header h3{font-family:var(--font-disp);font-size:0.85rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);}
+.card-body{padding:16px;}
+.field{margin-bottom:14px;}.field:last-child{margin-bottom:0;}
+label{display:block;margin-bottom:5px;font-size:0.75rem;font-weight:500;color:var(--muted);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.06em;}
+label .req{color:var(--accent);margin-left:3px;}
+input[type="text"],input[type="email"],input[type="number"],textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font-sans);font-size:16px;padding:11px 14px;transition:border-color 0.15s,box-shadow 0.15s;outline:none;appearance:none;-webkit-appearance:none;}
+@media(min-width:640px){input[type="text"],input[type="email"],input[type="number"],textarea{font-size:0.92rem;}}
+input:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(79,126,255,0.15);}
+textarea{resize:vertical;min-height:80px;line-height:1.5;}
+.input-group{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+@media(max-width:480px){.input-group{grid-template-columns:1fr;}}
+.upload-zone{border:2px dashed var(--border2);border-radius:10px;padding:16px;text-align:center;cursor:pointer;transition:all 0.2s;}
+.upload-zone:hover{border-color:var(--accent);background:rgba(79,126,255,0.04);}
+.upload-zone input{display:none;}
+.upload-zone img{max-height:56px;max-width:100%;border-radius:6px;object-fit:contain;margin-bottom:6px;}
+.upload-label{font-size:0.78rem;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:5px;}
+.upload-label strong{color:var(--accent);font-size:0.82rem;}
+.upload-meta{font-family:var(--font-mono);font-size:0.65rem;}
+.img-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+@media(max-width:480px){.img-grid{grid-template-columns:1fr;}}
+#map{height:200px;border-radius:8px;overflow:hidden;border:1px solid var(--border);margin-bottom:10px;}
+.geo-row{display:grid;grid-template-columns:1fr 100px;gap:10px;align-items:end;}
+#sim-map{height:340px;border-radius:12px;overflow:hidden;border:1px solid var(--border);}
+@media(min-width:768px){#sim-map{height:460px;}}
+@media(max-width:640px){#sim-map{height:280px;}}
+.pass-preview-wrap{position:sticky;top:0;}
+@media(max-width:960px){.pass-preview-wrap{position:static;}}
+.pass-flip-container{perspective:1000px;height:210px;margin-bottom:12px;}
+.pass-card{width:100%;height:210px;position:relative;transform-style:preserve-3d;transition:transform 0.6s cubic-bezier(0.4,0,0.2,1);}
+.pass-card.flipped{transform:rotateY(180deg);}
+.pass-front,.pass-back{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:14px;overflow:hidden;}
+.pass-front{background:linear-gradient(135deg,#1F3A5F 0%,#0F2040 100%);display:flex;flex-direction:column;padding:18px;box-shadow:0 8px 40px rgba(0,0,0,0.5),0 0 0 1px rgba(255,255,255,0.07);}
+.pass-back{background:var(--surface);border:1px solid var(--border2);transform:rotateY(180deg);padding:18px;display:flex;flex-direction:column;gap:6px;box-shadow:0 8px 40px rgba(0,0,0,0.5);}
+.pass-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:auto;}
+.pass-logo{width:38px;height:38px;border-radius:8px;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:1.1rem;overflow:hidden;}
+.pass-logo img{width:100%;height:100%;object-fit:contain;}
+.pass-type{font-family:var(--font-mono);font-size:0.6rem;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.1em;text-align:right;}
+.pass-strip{height:44px;margin:6px -18px;background:rgba(255,255,255,0.06);overflow:hidden;}
+.pass-strip img{width:100%;height:100%;object-fit:cover;opacity:0.7;}
+.pass-name{font-family:var(--font-disp);font-size:1.1rem;font-weight:700;color:#fff;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pass-sub{font-family:var(--font-mono);font-size:0.62rem;color:rgba(255,255,255,0.5);}
+.pass-tier{display:inline-block;background:rgba(79,126,255,0.25);border:1px solid rgba(79,126,255,0.4);color:var(--accent2);font-family:var(--font-mono);font-size:0.6rem;font-weight:500;text-transform:uppercase;letter-spacing:0.07em;padding:2px 7px;border-radius:4px;margin-top:3px;}
+.pass-expiry{font-family:var(--font-mono);font-size:0.6rem;color:var(--red);text-align:right;}
+.pass-qr-icon{width:40px;height:40px;background:rgba(255,255,255,0.9);border-radius:6px;align-self:flex-end;display:flex;align-items:center;justify-content:center;font-size:1.4rem;}
+.back-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);}
+.back-row:last-child{border-bottom:none;}
+.back-key{font-family:var(--font-mono);font-size:0.6rem;color:var(--muted);text-transform:uppercase;}
+.back-val{font-size:0.78rem;color:var(--text);font-weight:500;text-align:right;max-width:60%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pass-actions{display:flex;gap:8px;}
+.flip-btn{flex:1;padding:9px;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;cursor:pointer;color:var(--muted);font-size:0.82rem;font-family:var(--font-sans);transition:all 0.15s;min-height:44px;}
+.flip-btn:hover{color:var(--text);border-color:var(--accent);}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 22px;border-radius:9px;border:none;cursor:pointer;font-family:var(--font-sans);font-size:0.9rem;font-weight:500;transition:all 0.15s ease;text-decoration:none;min-height:44px;}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-primary:hover{background:var(--accent2);box-shadow:0 0 20px rgba(79,126,255,0.35);}
+.btn-primary:active{opacity:0.85;transform:scale(0.98);}
+.btn-outline{background:transparent;border:1px solid var(--border2);color:var(--text);}
+.btn-outline:hover{border-color:var(--accent);color:var(--accent2);}
+.btn-ghost{background:var(--surface2);border:1px solid var(--border);color:var(--muted);}
+.btn-ghost:hover{color:var(--text);border-color:var(--border2);}
+.btn-green{background:rgba(0,214,143,0.15);border:1px solid rgba(0,214,143,0.35);color:var(--green);}
+.btn-green:hover{background:rgba(0,214,143,0.25);}
+.btn-lg{padding:14px 28px;font-size:1rem;border-radius:12px;}
+.btn-sm{padding:8px 14px;font-size:0.82rem;border-radius:7px;min-height:36px;}
+.btn-full{width:100%;}
+.create-cta{margin-top:16px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:14px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+.create-cta-info{font-size:0.83rem;color:var(--muted);}
+.create-cta-info strong{display:block;color:var(--text);font-size:0.92rem;margin-bottom:2px;}
+.expiry-badge{display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:0.68rem;color:var(--amber);background:rgba(255,179,71,0.1);border:1px solid rgba(255,179,71,0.25);padding:2px 8px;border-radius:4px;margin-top:4px;}
+.modal-overlay{position:fixed;inset:0;z-index:1000;background:rgba(7,11,20,0.88);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.2s;}
+@media(min-width:640px){.modal-overlay{align-items:center;}}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:20px 20px 0 0;width:100%;max-height:92dvh;max-height:92vh;overflow-y:auto;overflow-x:hidden;box-shadow:0 -16px 60px rgba(0,0,0,0.6);transform:translateY(40px) scale(0.99);transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);padding-bottom:var(--safe-bottom);}
+@media(min-width:640px){.modal{border-radius:20px;width:min(540px,calc(100vw - 32px));max-height:90vh;transform:translateY(16px) scale(0.98);}}
+.modal-overlay.open .modal{transform:none;}
+.modal-head{padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--surface);z-index:1;}
+.modal-head h2{font-family:var(--font-disp);font-size:1.05rem;font-weight:700;}
+.success-content{text-align:center;padding:24px 20px;}
+.success-sub{color:var(--muted);font-size:0.88rem;margin-bottom:20px;}
+#qr-img{width:200px;height:200px;margin:0 auto 16px;display:block;border-radius:12px;padding:10px;background:#fff;}
+.wallet-links{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.wallet-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:14px 12px;border-radius:10px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);text-decoration:none;font-size:0.88rem;font-weight:500;transition:all 0.15s;min-height:48px;}
+.wallet-btn:hover{border-color:var(--accent);background:rgba(79,126,255,0.08);color:var(--accent2);}
+.public-url-row{display:flex;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;align-items:center;margin-bottom:14px;}
+.public-url-row span{flex:1;font-family:var(--font-mono);font-size:0.72rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pass-code-display{font-family:var(--font-mono);font-size:1.1rem;font-weight:500;color:var(--green);letter-spacing:0.1em;margin-bottom:6px;}
+.desktop-hint{background:rgba(79,126,255,0.08);border:1px solid rgba(79,126,255,0.2);border-radius:8px;padding:10px 14px;font-size:0.82rem;color:var(--accent2);margin-bottom:14px;}
+.toast{position:fixed;bottom:calc(16px + var(--safe-bottom));left:50%;transform:translateX(-50%) translateY(100px);z-index:2000;padding:12px 20px;background:var(--surface);border:1px solid var(--border2);border-radius:24px;display:flex;align-items:center;gap:10px;font-size:0.88rem;box-shadow:var(--shadow);opacity:0;transition:all 0.3s cubic-bezier(0.34,1.56,0.64,1);max-width:calc(100vw - 32px);white-space:nowrap;}
+@media(max-width:767px){.toast{bottom:calc(var(--bottom-nav-h) + var(--safe-bottom) + 12px);}}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+.toast.success{border-color:rgba(0,214,143,0.4);}
+.toast.error{border-color:rgba(255,77,109,0.4);}
+.toast .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.toast.success .dot{background:var(--green);}
+.toast.error .dot{background:var(--red);}
+.spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.notify-wrap{max-width:520px;margin:0 auto;}
+.pass-code-input{font-family:var(--font-mono)!important;letter-spacing:0.05em;text-transform:uppercase;}
+.divider{height:1px;background:var(--border);margin:16px 0;}
+.helper{font-size:0.76rem;color:var(--muted);margin-top:5px;line-height:1.5;}
+.badge{display:inline-flex;align-items:center;gap:4px;font-family:var(--font-mono);font-size:0.65rem;text-transform:uppercase;letter-spacing:0.06em;padding:3px 8px;border-radius:4px;}
+.badge-info{background:rgba(79,126,255,0.12);color:var(--accent2);border:1px solid rgba(79,126,255,0.2);}
+.section-title{font-family:var(--font-disp);font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:12px;margin-top:4px;display:flex;align-items:center;gap:8px;}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border);}
+.sim-layout{display:grid;grid-template-columns:1fr 300px;gap:20px;align-items:start;}
+@media(max-width:800px){.sim-layout{grid-template-columns:1fr;}}
+.sim-panel{display:flex;flex-direction:column;gap:14px;}
+.zone-list{display:flex;flex-direction:column;gap:8px;max-height:180px;overflow-y:auto;}
+.zone-item{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;cursor:pointer;transition:all 0.15s;position:relative;}
+.zone-item:hover{border-color:var(--accent);}
+.zone-item.active-zone{border-color:var(--green);background:rgba(0,214,143,0.06);}
+.zone-item-name{font-weight:600;font-size:0.88rem;margin-bottom:2px;}
+.zone-item-meta{font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);}
+.zone-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);position:absolute;top:14px;right:14px;transition:background 0.2s;}
+.zone-item.active-zone .zone-dot{background:var(--green);box-shadow:0 0 8px var(--green);}
+.sim-instructions{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;font-size:0.8rem;color:var(--muted);line-height:1.6;}
+.sim-instructions strong{color:var(--text);display:block;margin-bottom:4px;}
+.sim-status{font-family:var(--font-mono);font-size:0.76rem;padding:8px 12px;border-radius:8px;text-align:center;background:var(--surface2);border:1px solid var(--border);color:var(--muted);transition:all 0.3s;}
+.sim-status.inside{background:rgba(0,214,143,0.1);border-color:rgba(0,214,143,0.4);color:var(--green);}
+.empty-state{text-align:center;padding:24px 16px;color:var(--muted);}
+.empty-state .emo{font-size:2.2rem;margin-bottom:8px;}
+.empty-state p{font-size:0.84rem;line-height:1.6;}
+.phone-notif{position:fixed;top:calc(var(--header-h) + var(--safe-top) + 12px);left:50%;transform:translateX(-50%) translateY(-120px);z-index:3000;width:min(360px,calc(100vw - 24px));background:rgba(20,22,30,0.97);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:14px 16px;display:flex;gap:12px;align-items:flex-start;box-shadow:0 16px 60px rgba(0,0,0,0.7);transition:transform 0.5s cubic-bezier(0.34,1.56,0.64,1),opacity 0.35s;opacity:0;pointer-events:none;}
+.phone-notif.show{transform:translateX(-50%) translateY(0);opacity:1;pointer-events:all;}
+.notif-icon{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#1F3A5F,#0F2040);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;}
+.notif-body{flex:1;min-width:0;}
+.notif-app{font-family:var(--font-mono);font-size:0.6rem;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:3px;display:flex;align-items:center;justify-content:space-between;}
+.notif-time{color:rgba(255,255,255,0.25);}
+.notif-title{font-weight:600;font-size:0.88rem;color:#fff;margin-bottom:2px;}
+.notif-msg{font-size:0.78rem;color:rgba(255,255,255,0.55);line-height:1.4;}
+.notif-dismiss{background:none;border:none;color:rgba(255,255,255,0.3);cursor:pointer;font-size:1rem;padding:2px 6px;border-radius:6px;transition:color 0.15s;flex-shrink:0;}
+.notif-dismiss:hover{color:rgba(255,255,255,0.7);}
+.leaflet-container{background:#0d1221;}
+.leaflet-tile{filter:brightness(0.7) invert(1) hue-rotate(200deg) saturate(0.4) brightness(0.8);}
+.leaflet-control-attribution{background:rgba(13,18,33,0.8)!important;color:var(--muted)!important;font-size:0.6rem!important;}
+.leaflet-control-zoom a{background:var(--surface2)!important;color:var(--text)!important;border-color:var(--border)!important;width:36px!important;height:36px!important;line-height:36px!important;}
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+  <a class="logo" href="#"><div class="logo-mark">🎫</div>PassQR</a>
+  <nav class="top-nav">
+    <button class="tab-btn active" data-tab="create">Create Pass</button>
+    <button class="tab-btn" data-tab="geofence">📍 Geo-fence</button>
+    <button class="tab-btn" data-tab="notify">Notify</button>
+    <button class="tab-btn" data-tab="images">Images</button>
+  </nav>
+  <span class="demo-badge">✦ Live</span>
+</header>
+<div id="view">
+
+  <div id="tab-create" class="tab-panel active">
+    <div class="grid-2">
+      <div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-header"><h3>Holder Details</h3></div>
+          <div class="card-body">
+            <div class="input-group">
+              <div class="field"><label>Full Name <span class="req">*</span></label><input type="text" id="holder-name" placeholder="Tan Ah Kow" autocomplete="name" /></div>
+              <div class="field"><label>Email <span class="req">*</span></label><input type="email" id="holder-email" placeholder="you@example.com" autocomplete="email" /></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>Geo-fence</h3><span class="badge badge-info" style="margin-left:auto">Optional</span></div>
+          <div class="card-body">
+            <p class="helper" style="margin-bottom:10px">Set a location — when the holder enters this area, their phone shows the pass on the lock screen.</p>
+            <div class="field">
+              <label>Search Address</label>
+              <div style="display:flex;gap:8px"><input type="text" id="geo-address" placeholder="e.g. 1 Raffles Place, Singapore" /><button class="btn btn-ghost btn-sm" id="geo-search-btn" style="white-space:nowrap;flex-shrink:0">Search</button></div>
+            </div>
+            <div id="map"></div>
+            <div class="geo-row">
+              <div class="field" style="margin-bottom:0"><label>Lat, Lng</label><input type="text" id="geo-coords" placeholder="1.284, 103.851" readonly /></div>
+              <div class="field" style="margin-bottom:0"><label>Radius (m)</label><input type="number" id="geo-radius" value="200" min="50" max="5000" /></div>
+            </div>
+            <p class="helper" id="geo-hint">No location set.</p>
+          </div>
+        </div>
+      </div>
+      <div class="pass-preview-wrap">
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-header"><h3>Preview</h3></div>
+          <div class="card-body">
+            <div class="pass-flip-container">
+              <div class="pass-card" id="pass-card">
+                <div class="pass-front">
+                  <div class="pass-header"><div class="pass-logo" id="prev-logo">🎫</div><div><div class="pass-type">Demo Pass</div><div class="pass-expiry">⏱ 24h</div></div></div>
+                  <div class="pass-strip" id="prev-strip"></div>
+                  <div class="pass-name" id="prev-name">Your Name</div>
+                  <div class="pass-sub" id="prev-email">email@example.com</div>
+                  <div class="pass-tier">Demo</div>
+                  <div style="display:flex;justify-content:flex-end;margin-top:6px"><div class="pass-qr-icon">▦</div></div>
+                </div>
+                <div class="pass-back">
+                  <div class="back-row"><span class="back-key">Holder</span><span class="back-val" id="back-name">—</span></div>
+                  <div class="back-row"><span class="back-key">Email</span><span class="back-val" id="back-email">—</span></div>
+                  <div class="back-row"><span class="back-key">Expires</span><span class="back-val" id="back-expiry">—</span></div>
+                  <div class="back-row"><span class="back-key">Location</span><span class="back-val" id="back-geo">Not set</span></div>
+                  <div class="back-row"><span class="back-key">Interest</span><span class="back-val"><a href="interest.html" target="_blank" style="color:var(--accent2);font-size:0.72rem">Learn more →</a></span></div>
+                </div>
+              </div>
+            </div>
+            <div class="pass-actions"><button class="flip-btn" id="flip-btn">⟳ Flip</button></div>
+          </div>
+        </div>
+        <div class="create-cta">
+          <div class="create-cta-info"><strong>Ready to issue?</strong><div class="expiry-badge">⏱ 24-hour pass</div></div>
+          <button class="btn btn-primary btn-lg" id="create-btn"><span id="create-btn-text">Create Pass →</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-geofence" class="tab-panel">
+    <div style="margin-bottom:16px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div><h2 style="font-family:var(--font-disp);font-size:1.2rem;font-weight:700;margin-bottom:3px">Geo-fence Simulator</h2><p style="color:var(--muted);font-size:0.82rem">Tap map or drag 🧑 into a zone to see the phone notification.</p></div>
+      <button class="btn btn-green btn-sm" id="walk-in-btn" style="display:none;white-space:nowrap">▶ Walk In</button>
+    </div>
+    <div class="sim-layout">
+      <div>
+        <div id="sim-map"></div>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap">
+          <span style="display:flex;align-items:center;gap:5px;font-size:0.72rem;color:var(--muted)"><span style="width:10px;height:10px;border-radius:50%;background:#4F7EFF;display:inline-block"></span>Zone</span>
+          <span style="display:flex;align-items:center;gap:5px;font-size:0.72rem;color:var(--muted)"><span>🧑</span>Drag / tap to move</span>
+          <span style="display:flex;align-items:center;gap:5px;font-size:0.72rem;color:var(--muted)"><span style="width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;box-shadow:0 0 5px var(--green)"></span>Inside</span>
+        </div>
+      </div>
+      <div class="sim-panel">
+        <div class="card">
+          <div class="card-header"><h3>Zones</h3><span class="badge badge-info" id="zone-count" style="margin-left:auto">0</span></div>
+          <div class="card-body" style="padding:10px"><div class="zone-list" id="zone-list"><div class="empty-state"><div class="emo">📍</div><p>Create a pass with a geo-fence to add a zone.</p></div></div></div>
+        </div>
+        <div id="sim-status" class="sim-status outside">📡 Outside all zones</div>
+        <div class="sim-instructions"><strong>On a real device</strong>Apple/Google Wallet monitors zones via GPS. When the holder physically enters the area, the pass appears on their lock screen — no app open required.</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-notify" class="tab-panel">
+    <div class="notify-wrap">
+      <div class="card">
+        <div class="card-header"><h3>Send Pass Notification</h3></div>
+        <div class="card-body">
+          <p class="helper" style="margin-bottom:16px">Push a message to a specific wallet pass.</p>
+          <div class="field"><label>Pass Code <span class="req">*</span></label><input type="text" id="notify-code" class="pass-code-input" placeholder="PASS-XXXXXXXX" autocomplete="off" /></div>
+          <div class="field"><label>Title</label><input type="text" id="notify-title" placeholder="e.g. Service Reminder" /></div>
+          <div class="field"><label>Message <span class="req">*</span></label><textarea id="notify-message" placeholder="e.g. Your service visit is tomorrow at 10am."></textarea></div>
+          <button class="btn btn-primary btn-full" id="notify-btn" style="margin-top:4px">Send Notification →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-images" class="tab-panel">
+    <div class="card" style="max-width:600px;margin:0 auto">
+      <div class="card-header"><h3>Template Images</h3></div>
+      <div class="card-body">
+        <p class="helper" style="margin-bottom:16px">Upload images and push to template — changes apply to all existing passes automatically.</p>
+        <div class="img-grid">
+          <div><p class="section-title">Logo</p><div class="upload-zone" onclick="triggerUpload('logo')"><input type="file" id="upload-logo" accept="image/*" onchange="handleImageUpload(this,'logo')" /><div id="logo-preview"><div class="upload-label"><span style="font-size:1.4rem">🖼️</span><strong>Logo</strong><span class="upload-meta">480×480 PNG</span></div></div></div></div>
+          <div><p class="section-title">Icon</p><div class="upload-zone" onclick="triggerUpload('icon')"><input type="file" id="upload-icon" accept="image/*" onchange="handleImageUpload(this,'icon')" /><div id="icon-preview"><div class="upload-label"><span style="font-size:1.4rem">🟦</span><strong>Icon</strong><span class="upload-meta">87×87 PNG</span></div></div></div></div>
+          <div><p class="section-title">Strip</p><div class="upload-zone" onclick="triggerUpload('strip')"><input type="file" id="upload-strip" accept="image/*" onchange="handleImageUpload(this,'strip')" /><div id="strip-preview"><div class="upload-label"><span style="font-size:1.4rem">🖼️</span><strong>Strip</strong><span class="upload-meta">1125×432</span></div></div></div></div>
+        </div>
+        <div class="divider"></div>
+        <div style="display:flex;gap:10px;justify-content:flex-end">
+          <button class="btn btn-ghost btn-sm" onclick="clearImages()">Clear</button>
+          <button class="btn btn-primary" id="push-images-btn">Push to Template →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<nav id="bottom-nav">
+  <div class="bottom-nav-inner">
+    <button class="bnav-btn active" data-tab="create"><span class="icon">🎫</span>Create</button>
+    <button class="bnav-btn" data-tab="geofence"><span class="icon">📍</span>Geo-fence</button>
+    <button class="bnav-btn" data-tab="notify"><span class="icon">🔔</span>Notify</button>
+    <button class="bnav-btn" data-tab="images"><span class="icon">🖼️</span>Images</button>
+  </div>
+</nav>
+</div>
+
+<div class="modal-overlay" id="success-modal">
+  <div class="modal">
+    <div class="modal-head"><h2>🎉 Pass Created!</h2><button class="btn btn-ghost btn-sm" onclick="closeSuccess()">✕</button></div>
+    <div class="success-content">
+      <div class="desktop-hint" id="desktop-hint" style="display:none">📱 <strong>On desktop?</strong> Scan the QR with your phone.</div>
+      <img id="qr-img" src="" alt="QR Code" />
+      <div class="pass-code-display" id="result-code">—</div>
+      <p class="success-sub">Expires in 24 hours</p>
+      <div class="public-url-row"><span id="result-url">—</span><button class="btn btn-ghost btn-sm" onclick="copyUrl()">Copy</button></div>
+      <div class="wallet-links">
+        <a id="apple-link" href="#" target="_blank" class="wallet-btn">🍎 Apple Wallet</a>
+        <a id="google-link" href="#" target="_blank" class="wallet-btn">🔵 Google Wallet</a>
+      </div>
+      <a id="whatsapp-link" href="#" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:12px">📲 Share via WhatsApp</a>
+      <div id="geo-fence-notice" style="display:none;background:rgba(0,214,143,0.08);border:1px solid rgba(0,214,143,0.2);border-radius:10px;padding:12px;margin-bottom:12px;text-align:left">
+        <div style="font-size:0.76rem;color:var(--green);font-weight:600;margin-bottom:3px">📍 Geo-fence attached</div>
+        <div style="font-size:0.76rem;color:var(--muted)">When the holder enters the zone, this pass appears on their lock screen. Try the <strong style="color:var(--text)">Geo-fence</strong> tab to simulate it.</div>
+      </div>
+      <button class="btn btn-ghost btn-sm btn-full" onclick="closeSuccess()">Done</button>
+    </div>
+  </div>
+</div>
+
+<div class="phone-notif" id="phone-notif">
+  <div class="notif-icon">🎫</div>
+  <div class="notif-body">
+    <div class="notif-app"><span>Wallet</span><span class="notif-time" id="notif-time">now</span></div>
+    <div class="notif-title" id="notif-title">Pass nearby</div>
+    <div class="notif-msg" id="notif-msg">You're near a location linked to your pass.</div>
+  </div>
+  <button class="notif-dismiss" onclick="dismissNotif()">✕</button>
+</div>
+
+<div class="toast" id="toast"><div class="dot"></div><span id="toast-msg"></span></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const WORKER_URL  = 'https://passqr-studio-worker.vincent-513.workers.dev';
+const TEMPLATE_ID = 'de23a11e-a369-4d07-8f72-2df7cb1b0d87';
+
+let zones=JSON.parse(sessionStorage.getItem('pqr_zones')||'[]');
+function saveZones(){sessionStorage.setItem('pqr_zones',JSON.stringify(zones));}
+
+const expiryStr=(()=>{const d=new Date(Date.now()+24*60*60*1000);return d.toLocaleDateString('en-SG',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});})();
+document.getElementById('back-expiry').textContent=expiryStr;
+
+function switchTab(tabId){
+  document.querySelectorAll('.tab-btn,.bnav-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===tabId));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active',p.id==='tab-'+tabId));
+  if(tabId==='geofence')setTimeout(initSimMap,50);
+}
+document.querySelectorAll('.tab-btn,.bnav-btn').forEach(btn=>btn.addEventListener('click',()=>switchTab(btn.dataset.tab)));
+
+document.getElementById('holder-name').addEventListener('input',e=>{const v=e.target.value||'Your Name';document.getElementById('prev-name').textContent=v;document.getElementById('back-name').textContent=v;});
+document.getElementById('holder-email').addEventListener('input',e=>{const v=e.target.value||'email@example.com';document.getElementById('prev-email').textContent=v;document.getElementById('back-email').textContent=v;});
+document.getElementById('flip-btn').addEventListener('click',()=>document.getElementById('pass-card').classList.toggle('flipped'));
+
+let map,marker,circle;
+function initMap(){
+  map=L.map('map',{zoomControl:true}).setView([1.3521,103.8198],12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM',maxZoom:19}).addTo(map);
+  map.on('click',e=>setGeoFence(e.latlng.lat,e.latlng.lng));
+}
+function setGeoFence(lat,lng){
+  if(marker)map.removeLayer(marker);if(circle)map.removeLayer(circle);
+  const r=parseInt(document.getElementById('geo-radius').value)||200;
+  marker=L.circleMarker([lat,lng],{color:'#4F7EFF',fillColor:'#4F7EFF',fillOpacity:0.8,radius:8}).addTo(map);
+  circle=L.circle([lat,lng],{color:'#4F7EFF',fillColor:'#4F7EFF',fillOpacity:0.08,weight:1.5,radius:r}).addTo(map);
+  document.getElementById('geo-coords').value=`${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+  document.getElementById('geo-hint').textContent=`📍 ${lat.toFixed(4)}, ${lng.toFixed(4)} · ${r}m`;
+  document.getElementById('back-geo').textContent=`${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+}
+document.getElementById('geo-radius').addEventListener('change',()=>{const c=document.getElementById('geo-coords').value;if(c&&circle){const[la,ln]=c.split(',').map(Number);setGeoFence(la,ln);}});
+document.getElementById('geo-search-btn').addEventListener('click',async()=>{
+  const q=document.getElementById('geo-address').value.trim();if(!q)return;
+  const btn=document.getElementById('geo-search-btn');btn.textContent='…';btn.disabled=true;
+  try{const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`);const d=await r.json();if(d.length){map.setView([d[0].lat,d[0].lon],16);setGeoFence(parseFloat(d[0].lat),parseFloat(d[0].lon));}else toast('Not found','error');}
+  catch{toast('Geocoding failed','error');}
+  btn.textContent='Search';btn.disabled=false;
+});
+
+const images={logo:null,icon:null,strip:null};
+function triggerUpload(t){document.getElementById('upload-'+t).click();}
+function handleImageUpload(input,type){
+  const file=input.files[0];if(!file)return;
+  const r=new FileReader();
+  r.onload=e=>{
+    images[type]=e.target.result;
+    document.getElementById(type+'-preview').innerHTML=`<img src="${e.target.result}" style="max-height:56px;object-fit:contain;border-radius:5px;margin-bottom:4px"/><div class="upload-label"><span class="upload-meta">${file.name}</span></div>`;
+    if(type==='logo')document.getElementById('prev-logo').innerHTML=`<img src="${e.target.result}"/>`;
+    if(type==='strip')document.getElementById('prev-strip').innerHTML=`<img src="${e.target.result}"/>`;
+  };r.readAsDataURL(file);
+}
+function clearImages(){
+  Object.keys(images).forEach(k=>{images[k]=null;});
+  ['logo','icon','strip'].forEach(t=>{document.getElementById(t+'-preview').innerHTML='<div class="upload-label"><span style="font-size:1.4rem">🖼️</span><strong>'+t[0].toUpperCase()+t.slice(1)+'</strong></div>';document.getElementById('upload-'+t).value='';});
+  document.getElementById('prev-logo').innerHTML='🎫';document.getElementById('prev-strip').innerHTML='';
+}
+
+async function apiCall(method,path,body){
+  const res=await fetch(WORKER_URL+path,{method,headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
+  if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(typeof e.error==='string'?e.error:e.message||JSON.stringify(e)||`HTTP ${res.status}`);}
+  return res.json();
+}
+
+document.getElementById('create-btn').addEventListener('click',async()=>{
+  const name=document.getElementById('holder-name').value.trim();
+  const email=document.getElementById('holder-email').value.trim();
+  if(!name){toast('Full name is required','error');return;}
+  if(!email){toast('Email is required','error');return;}
+  const btn=document.getElementById('create-btn');const t=document.getElementById('create-btn-text');
+  btn.disabled=true;t.innerHTML='<span class="spinner"></span>';
+  const coords=document.getElementById('geo-coords').value;
+  let locs=[];
+  if(coords){const[la,ln]=coords.split(',').map(Number);if(!isNaN(la)&&!isNaN(ln))locs=[{latitude:la,longitude:ln,radius:parseInt(document.getElementById('geo-radius').value)||200,message:`Welcome, ${name}!`}];}
+  try{
+    const pass=await apiCall('POST','/api/passes',{template_id:TEMPLATE_ID,holder_name:name,holder_email:email,data:{locations:locs}});
+    if(locs.length){const{latitude:la,longitude:ln,radius:r}=locs[0];zones.push({id:pass.code||pass.id,name,code:pass.code||pass.id,lat:la,lng:ln,radius:r,msg:`Welcome, ${name}!`});saveZones();renderZoneList();}
+    showSuccess(pass,locs.length>0);
+  }catch(e){toast('Error: '+e.message,'error');}
+  btn.disabled=false;t.textContent='Create Pass →';
+});
+
+function showSuccess(pass,hasGeo){
+  const code=pass.code||pass.id||'—';
+  const pub=`https://www.passqr.com/p/${code}`;
+  document.getElementById('result-code').textContent=code;
+  document.getElementById('result-url').textContent=pub;
+  document.getElementById('apple-link').href=`https://www.passqr.com/api/wallet/apple?code=${code}`;
+  document.getElementById('google-link').href=`https://www.passqr.com/api/wallet/google?code=${code}`;
+  document.getElementById('whatsapp-link').href=`https://wa.me/?text=${encodeURIComponent('Your demo pass: '+pub)}`;
+  document.getElementById('qr-img').src=`https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=10&color=070B14&bgcolor=FFFFFF&data=${encodeURIComponent(pub)}`;
+  document.getElementById('desktop-hint').style.display=/Mobi|Android|iPhone/i.test(navigator.userAgent)?'none':'block';
+  document.getElementById('geo-fence-notice').style.display=hasGeo?'block':'none';
+  document.getElementById('success-modal').classList.add('open');
+}
+function closeSuccess(){document.getElementById('success-modal').classList.remove('open');}
+document.getElementById('success-modal').addEventListener('click',e=>{if(e.target===document.getElementById('success-modal'))closeSuccess();});
+function copyUrl(){navigator.clipboard.writeText(document.getElementById('result-url').textContent).then(()=>toast('Copied!','success'));}
+
+// ── Images: upload each type individually via POST /api/template/image ────────
 document.getElementById('push-images-btn').addEventListener('click',async()=>{
   if(!images.logo&&!images.icon&&!images.strip){toast('Upload at least one image','error');return;}
   const btn=document.getElementById('push-images-btn');btn.innerHTML='<span class="spinner"></span>';btn.disabled=true;
   try{
-    // Upload each image type separately to POST /api/template/image
     const uploads=[
       images.logo  && apiCall('POST','/api/template/image',{template_id:TEMPLATE_ID,type:'logo', data:images.logo}),
       images.icon  && apiCall('POST','/api/template/image',{template_id:TEMPLATE_ID,type:'icon', data:images.icon}),
@@ -14,3 +484,91 @@ document.getElementById('push-images-btn').addEventListener('click',async()=>{
   }catch(e){toast('Push failed: '+e.message,'error');}
   btn.innerHTML='Push to Template →';btn.disabled=false;
 });
+
+document.getElementById('notify-btn').addEventListener('click',async()=>{
+  const code=document.getElementById('notify-code').value.trim().toUpperCase();
+  const title=document.getElementById('notify-title').value.trim();
+  const msg=document.getElementById('notify-message').value.trim();
+  if(!code){toast('Pass code required','error');return;}
+  if(!msg){toast('Message required','error');return;}
+  const btn=document.getElementById('notify-btn');btn.innerHTML='<span class="spinner"></span>';btn.disabled=true;
+  try{await apiCall('POST','/api/notify',{pass_id:code,title,message:msg});toast('Sent ✓','success');document.getElementById('notify-message').value='';}
+  catch(e){toast('Error: '+e.message,'error');}
+  btn.innerHTML='Send Notification →';btn.disabled=false;
+});
+
+let simMap=null,simPerson=null,simLayers=[];
+let insideZone=null,notifTimer=null;
+const personIcon=L.divIcon({html:'<div style="font-size:1.5rem;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.6));cursor:grab">🧑</div>',iconSize:[30,30],iconAnchor:[15,28],className:''});
+
+function initSimMap(){
+  if(simMap){simMap.invalidateSize();return;}
+  simMap=L.map('sim-map',{zoomControl:true}).setView([1.3521,103.8198],14);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM',maxZoom:19}).addTo(simMap);
+  simPerson=L.marker([1.3521,103.8198],{icon:personIcon,draggable:true,zIndexOffset:1000}).addTo(simMap);
+  simPerson.on('drag',checkZones);simPerson.on('dragend',checkZones);
+  simMap.on('click',e=>{simPerson.setLatLng(e.latlng);checkZones();});
+  renderSimZones();
+}
+function renderSimZones(){
+  if(!simMap)return;simLayers.forEach(l=>simMap.removeLayer(l));simLayers=[];
+  if(!zones.length)return;
+  const bounds=[];
+  zones.forEach(z=>{
+    const c=L.circle([z.lat,z.lng],{color:'#4F7EFF',fillColor:'#4F7EFF',fillOpacity:0.12,weight:2,radius:z.radius,dashArray:'6 4'}).addTo(simMap);
+    const p=L.circleMarker([z.lat,z.lng],{color:'#4F7EFF',fillColor:'#4F7EFF',fillOpacity:0.9,radius:7}).bindTooltip(`<b>${z.name}</b>`,{permanent:false}).addTo(simMap);
+    simLayers.push(c,p);bounds.push([z.lat,z.lng]);
+  });
+  if(bounds.length)simMap.fitBounds(L.latLngBounds(bounds).pad(0.5));
+  document.getElementById('walk-in-btn').style.display='';
+}
+function checkZones(){
+  if(!simPerson||!zones.length)return;
+  const pos=simPerson.getLatLng();let found=null;
+  zones.forEach(z=>{if(simMap.distance(pos,[z.lat,z.lng])<=z.radius)found=z;});
+  const st=document.getElementById('sim-status');
+  if(found&&found!==insideZone){
+    insideZone=found;st.className='sim-status inside';st.textContent='✅ Inside: '+found.name;
+    renderZoneList(found.id);showPhoneNotif(found);
+    [0,350,700].forEach(d=>setTimeout(()=>{if(!simMap)return;const r=L.circle([found.lat,found.lng],{radius:found.radius*0.6,color:'#00D68F',fill:false,weight:2,opacity:0.8}).addTo(simMap);setTimeout(()=>simMap.removeLayer(r),1400);},d));
+  }else if(!found&&insideZone){
+    insideZone=null;st.className='sim-status outside';st.textContent='📡 Outside all zones';
+    renderZoneList(null);dismissNotif();
+  }
+}
+document.getElementById('walk-in-btn').addEventListener('click',()=>{
+  if(!zones.length||!simMap)return;
+  const z=zones[0];const startLat=z.lat+(z.radius/111000)*2.5;
+  simPerson.setLatLng([startLat,z.lng]);simMap.panTo([z.lat,z.lng]);insideZone=null;
+  let step=0;const iv=setInterval(()=>{step++;const t=step/40;simPerson.setLatLng([startLat+(z.lat-startLat)*t,z.lng]);checkZones();if(step>=40)clearInterval(iv);},40);
+});
+function renderZoneList(activeId=null){
+  const list=document.getElementById('zone-list');
+  document.getElementById('zone-count').textContent=zones.length;
+  if(!zones.length){list.innerHTML='<div class="empty-state"><div class="emo">📍</div><p>Create a pass with a geo-fence to add a zone.</p></div>';document.getElementById('walk-in-btn').style.display='none';return;}
+  document.getElementById('walk-in-btn').style.display='';
+  list.innerHTML=zones.map(z=>`<div class="zone-item ${activeId===z.id?'active-zone':''}" onclick="focusZone('${z.id}')"><div class="zone-dot"></div><div class="zone-item-name">${escHtml(z.name)}</div><div class="zone-item-meta">${escHtml(z.code)} · ${z.radius}m</div></div>`).join('');
+}
+function focusZone(id){const z=zones.find(x=>x.id===id);if(z&&simMap)simMap.flyTo([z.lat,z.lng],16,{duration:0.7});}
+let notifVisible=false;
+function showPhoneNotif(zone){
+  const el=document.getElementById('phone-notif');
+  document.getElementById('notif-time').textContent=new Date().toLocaleTimeString('en-SG',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('notif-title').textContent='Pass nearby — '+zone.name;
+  document.getElementById('notif-msg').textContent=zone.msg||`Entered zone for pass ${zone.code}.`;
+  el.classList.add('show');notifVisible=true;
+  clearTimeout(notifTimer);notifTimer=setTimeout(()=>{if(notifVisible)dismissNotif();},6000);
+}
+function dismissNotif(){document.getElementById('phone-notif').classList.remove('show');notifVisible=false;}
+function escHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+let tt;
+function toast(msg,type='success'){
+  const el=document.getElementById('toast');el.className=`toast ${type}`;
+  document.getElementById('toast-msg').textContent=msg;el.classList.add('show');
+  clearTimeout(tt);tt=setTimeout(()=>el.classList.remove('show'),3000);
+}
+initMap();renderZoneList();
+</script>
+</body>
+</html>
