@@ -1,11 +1,11 @@
 /**
  * PassQR Studio — Cloudflare Worker
  *
- * Secrets:
+ * Required secrets (Cloudflare dashboard → Workers & Pages → passqr-studio-worker → Settings → Variables):
  *   PASSQR_API_KEY        — pqr_live_...
- *   PASSQR_TEMPLATE_ID    — template UUID
- *   IOTPUSH_TOPIC         — e.g. "claude"
- *   IOTPUSH_API_KEY       — iotPush topic key
+ *   PASSQR_TEMPLATE_ID    — de23a11e-a369-4d07-8f72-2df7cb1b0d87
+ *   IOTPUSH_TOPIC         — claude
+ *   IOTPUSH_API_KEY       — iotPush topic key (optional)
  *   SUPABASE_URL          — https://gyllfnsnniuqaarsulsk.supabase.co
  *   SUPABASE_SERVICE_KEY  — Supabase service_role key
  *   PASSQR_BUSINESS_ID    — e1965c7a-e0fc-4f65-a6ff-652bea2e2173
@@ -52,6 +52,14 @@ function walletUrls(code) {
   };
 }
 
+function sbHeaders(env) {
+  return {
+    apikey: env.SUPABASE_SERVICE_KEY,
+    Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+    'Content-Type': 'application/json',
+  };
+}
+
 async function notifyIotPush(env, title, message) {
   const topic  = env.IOTPUSH_TOPIC   || 'claude';
   const apiKey = env.IOTPUSH_API_KEY || '';
@@ -65,75 +73,61 @@ async function notifyIotPush(env, title, message) {
   } catch (e) { console.error('iotPush failed:', e.message); }
 }
 
-// ── Supabase image upload ────────────────────────────────────────────────────
-// Accepts base64 data URI, uploads to Supabase Storage, updates template record
+// ── Supabase helpers ─────────────────────────────────────────────────────────
+function requireSupabase(env) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY)
+    throw new Error('Missing secrets: SUPABASE_URL and SUPABASE_SERVICE_KEY must be set in Cloudflare Worker settings.');
+}
+
+async function passCodeToUuid(env, code) {
+  requireSupabase(env);
+  const res = await fetch(
+    `${env.SUPABASE_URL}/rest/v1/passes?code=eq.${encodeURIComponent(code)}&select=id&limit=1`,
+    { headers: sbHeaders(env) }
+  );
+  if (!res.ok) throw new Error(`Supabase lookup failed: ${res.status}`);
+  const rows = await res.json();
+  if (!Array.isArray(rows) || !rows.length) throw new Error(`Pass not found: ${code}`);
+  return rows[0].id;
+}
+
 async function uploadTemplateImage(env, templateId, imageType, dataUri) {
-  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) {
-    throw new Error('SUPABASE_URL and SUPABASE_SERVICE_KEY secrets are required for image uploads');
-  }
-
+  requireSupabase(env);
   const businessId = env.PASSQR_BUSINESS_ID;
-  if (!businessId) throw new Error('PASSQR_BUSINESS_ID secret is required for image uploads');
+  if (!businessId) throw new Error('Missing secret: PASSQR_BUSINESS_ID must be set in Cloudflare Worker settings.');
 
-  // Parse base64 data URI  →  data:image/png;base64,iVBOR...
   const match = dataUri.match(/^data:([^;]+);base64,(.+)$/);
   if (!match) throw new Error('Invalid image data URI');
   const [, mimeType, base64Data] = match;
 
-  // Decode base64 to binary
   const binaryStr = atob(base64Data);
   const bytes = new Uint8Array(binaryStr.length);
   for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
 
   const ext = mimeType.split('/')[1]?.replace('jpeg','jpg') || 'png';
-  const timestamp = Date.now();
-  const filePath = `${businessId}/${templateId}/${imageType}_${timestamp}.${ext}`;
+  const filePath = `${businessId}/${templateId}/${imageType}_${Date.now()}.${ext}`;
 
-  // Upload to Supabase Storage
   const uploadRes = await fetch(
     `${env.SUPABASE_URL}/storage/v1/object/${STORAGE_BUCKET}/${filePath}`,
     {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
-        'Content-Type': mimeType,
-        'x-upsert': 'true',
-      },
+      headers: { Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`, 'Content-Type': mimeType, 'x-upsert': 'true' },
       body: bytes,
     }
   );
+  if (!uploadRes.ok) throw new Error(`Storage upload failed: ${await uploadRes.text()}`);
 
-  if (!uploadRes.ok) {
-    const err = await uploadRes.text();
-    throw new Error(`Storage upload failed: ${err}`);
-  }
-
-  // Build public URL
   const publicUrl = `${env.SUPABASE_URL}/storage/v1/object/public/${STORAGE_BUCKET}/${filePath}`;
 
-  // Update template record in Supabase (PostgREST)
   const fieldMap = { logo: 'logo_url', icon: 'icon_url', strip: 'strip_url' };
   const field = fieldMap[imageType];
   if (!field) throw new Error(`Unknown image type: ${imageType}`);
 
   const updateRes = await fetch(
     `${env.SUPABASE_URL}/rest/v1/templates?id=eq.${templateId}`,
-    {
-      method: 'PATCH',
-      headers: {
-        apikey: env.SUPABASE_SERVICE_KEY,
-        Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
-        'Content-Type': 'application/json',
-        Prefer: 'return=minimal',
-      },
-      body: JSON.stringify({ [field]: publicUrl }),
-    }
+    { method: 'PATCH', headers: { ...sbHeaders(env), Prefer: 'return=minimal' }, body: JSON.stringify({ [field]: publicUrl }) }
   );
-
-  if (!updateRes.ok) {
-    const err = await updateRes.text();
-    throw new Error(`Template DB update failed: ${err}`);
-  }
+  if (!updateRes.ok) throw new Error(`Template update failed: ${await updateRes.text()}`);
 
   return { url: publicUrl, type: imageType, field };
 }
@@ -175,7 +169,7 @@ export default {
         const urls   = walletUrls(pass.code);
         const result = { ...pass, ...urls, wallet: urls };
 
-        await notifyIotPush(env, '🎫 New Demo Pass Created',
+        await notifyIotPush(env, '\uD83C\uDFAB New Demo Pass Created',
           `Holder: ${body.holder_name} <${body.holder_email}>\nCode: ${pass.code}\nLink: ${urls.public}`);
 
         return json(result);
@@ -203,31 +197,52 @@ export default {
       }
 
       // POST /api/notify
+      // Body: { pass_id: 'PASS-XXXXXXXX', title?, message }
+      // Resolves pass CODE → UUID via Supabase, then fires APNs push via v1 API
       if (path === '/api/notify' && request.method === 'POST') {
         const { pass_id, message, title } = await request.json();
-        const res = await fetch(`${PASSQR_BASE}/passes/${pass_id}/messages`, {
-          method: 'POST', headers: passqrHeaders(env),
-          body: JSON.stringify({ message, title }),
+        if (!pass_id) return json({ error: 'pass_id is required' }, 400);
+        if (!message) return json({ error: 'message is required' }, 400);
+
+        // Resolve PASS-CODE → UUID
+        const passUuid = await passCodeToUuid(env, pass_id);
+
+        // Fire APNs push via v1 API
+        const res = await fetch(`${PASSQR_BASE}/passes/${passUuid}/push`, {
+          method: 'POST',
+          headers: passqrHeaders(env),
         });
-        const d = await res.json();
-        if (!res.ok) return json({ error: errMsg(d) }, res.status);
-        return json(d);
+
+        const text = await res.text();
+        let d;
+        try { d = JSON.parse(text); } catch { d = { raw: text }; }
+
+        if (!res.ok) {
+          if (res.status === 402) {
+            return json({
+              error: 'Pro plan required',
+              message: 'Push notifications to Apple Wallet require a PassQR Pro plan.',
+              upgrade: 'https://passqr.com/dashboard/billing',
+            }, 402);
+          }
+          return json({ error: errMsg(d) }, res.status);
+        }
+
+        return json({ success: true, ...d, message_sent: message, title_sent: title });
       }
 
-      // POST /api/template/image — upload logo/icon/strip to Supabase Storage
-      // Body: { template_id?, type: "logo"|"icon"|"strip", data: "data:image/...;base64,..." }
+      // POST /api/template/image
+      // Body: { template_id?, type: 'logo'|'icon'|'strip', data: 'data:image/...;base64,...' }
       if (path === '/api/template/image' && request.method === 'POST') {
         const body       = await request.json();
         const templateId = body.template_id || env.PASSQR_TEMPLATE_ID;
-        const imageType  = body.type;   // "logo" | "icon" | "strip"
-        const dataUri    = body.data;   // base64 data URI
+        const imageType  = body.type;
+        const dataUri    = body.data;
 
-        if (!['logo','icon','strip'].includes(imageType)) {
+        if (!['logo','icon','strip'].includes(imageType))
           return json({ error: 'type must be logo, icon, or strip' }, 400);
-        }
-        if (!dataUri?.startsWith('data:image/')) {
+        if (!dataUri?.startsWith('data:image/'))
           return json({ error: 'data must be a base64 image data URI' }, 400);
-        }
 
         const result = await uploadTemplateImage(env, templateId, imageType, dataUri);
         return json({ success: true, ...result });
@@ -257,7 +272,7 @@ export default {
         if (del.ok) deleted++;
       }
       if (deleted > 0) {
-        await notifyIotPush(env, '🗑️ PassQR Cleanup',
+        await notifyIotPush(env, '\uD83D\uDDD1\uFE0F PassQR Cleanup',
           `Deleted ${deleted} expired pass${deleted !== 1 ? 'es' : ''}.`);
       }
     } catch (e) { console.error('Cron error:', e.message); }
