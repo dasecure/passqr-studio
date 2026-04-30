@@ -1,14 +1,23 @@
 /**
  * PassQR Studio — Cloudflare Worker
  *
- * Required secrets (Cloudflare dashboard → Workers & Pages → passqr-studio-worker → Settings → Variables):
+ * Required secrets:
  *   PASSQR_API_KEY        — pqr_live_...
  *   PASSQR_TEMPLATE_ID    — de23a11e-a369-4d07-8f72-2df7cb1b0d87
  *   IOTPUSH_TOPIC         — claude
  *   IOTPUSH_API_KEY       — iotPush topic key (optional)
+ *
+ * Optional secrets (only needed for image upload feature):
  *   SUPABASE_URL          — https://gyllfnsnniuqaarsulsk.supabase.co
  *   SUPABASE_SERVICE_KEY  — Supabase service_role key
  *   PASSQR_BUSINESS_ID    — e1965c7a-e0fc-4f65-a6ff-652bea2e2173
+ *
+ * Notes:
+ *   - /api/notify accepts EITHER pass_uuid (preferred, fast) OR pass_id (code, slower).
+ *     The frontend caches the code→uuid mapping in sessionStorage from create_pass
+ *     responses, so it sends pass_uuid directly. No Supabase lookup needed for the
+ *     common case where the user is notifying a pass they created in this session.
+ *   - Image upload still requires the Supabase secrets.
  */
 
 const PASSQR_BASE    = 'https://www.passqr.com/api/v1';
@@ -73,28 +82,61 @@ async function notifyIotPush(env, title, message) {
   } catch (e) { console.error('iotPush failed:', e.message); }
 }
 
-// ── Supabase helpers ─────────────────────────────────────────────────────────
-function requireSupabase(env) {
-  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY)
-    throw new Error('Missing secrets: SUPABASE_URL and SUPABASE_SERVICE_KEY must be set in Cloudflare Worker settings.');
-}
-
+// ── Code → UUID resolver ─────────────────────────────────────────────────────
+//
+// Two strategies, in order of preference:
+//   1. Supabase direct query (1 round-trip, instant) — if SUPABASE_URL + SUPABASE_SERVICE_KEY are set.
+//   2. PassQR list API (paginates the business's passes, finds the matching code) — fallback when Supabase isn't configured.
+//
+// Strategy 2 is slower (up to N pages of 100 passes each) but means the notify
+// feature doesn't require Supabase secrets. For demos with <100 passes the
+// fallback completes in one round-trip.
 async function passCodeToUuid(env, code) {
-  requireSupabase(env);
-  const res = await fetch(
-    `${env.SUPABASE_URL}/rest/v1/passes?code=eq.${encodeURIComponent(code)}&select=id&limit=1`,
-    { headers: sbHeaders(env) }
-  );
-  if (!res.ok) throw new Error(`Supabase lookup failed: ${res.status}`);
-  const rows = await res.json();
-  if (!Array.isArray(rows) || !rows.length) throw new Error(`Pass not found: ${code}`);
-  return rows[0].id;
+  // Strategy 1: Supabase direct query
+  if (env.SUPABASE_URL && env.SUPABASE_SERVICE_KEY) {
+    const res = await fetch(
+      `${env.SUPABASE_URL}/rest/v1/passes?code=eq.${encodeURIComponent(code)}&select=id&limit=1`,
+      { headers: sbHeaders(env) }
+    );
+    if (res.ok) {
+      const rows = await res.json();
+      if (Array.isArray(rows) && rows.length) return rows[0].id;
+    }
+  }
+
+  // Strategy 2: PassQR list API fallback (paginate all passes for this template)
+  const templateId = env.PASSQR_TEMPLATE_ID;
+  if (!templateId) {
+    throw new Error('Cannot resolve pass code: PASSQR_TEMPLATE_ID not set in worker, and Supabase secrets unavailable.');
+  }
+
+  const upperCode = code.toUpperCase();
+  for (let page = 1; page <= 5; page++) {
+    const res = await fetch(
+      `${PASSQR_BASE}/passes?template_id=${templateId}&limit=100&page=${page}`,
+      { headers: passqrHeaders(env) }
+    );
+    if (!res.ok) throw new Error(`PassQR list failed: ${res.status}`);
+    const payload = await res.json();
+    const passes  = Array.isArray(payload.data) ? payload.data : [];
+    if (!passes.length) break;
+
+    const match = passes.find(p => (p.code || '').toUpperCase() === upperCode);
+    if (match) return match.id;
+
+    // Stop early if we've seen the last page
+    if (passes.length < 100) break;
+  }
+
+  throw new Error(`Pass not found: ${code}`);
 }
 
 async function uploadTemplateImage(env, templateId, imageType, dataUri) {
-  requireSupabase(env);
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY)
+    throw new Error('Image upload requires SUPABASE_URL and SUPABASE_SERVICE_KEY secrets in the Cloudflare Worker.');
+
   const businessId = env.PASSQR_BUSINESS_ID;
-  if (!businessId) throw new Error('Missing secret: PASSQR_BUSINESS_ID must be set in Cloudflare Worker settings.');
+  if (!businessId) throw new Error('Image upload requires PASSQR_BUSINESS_ID secret in the Cloudflare Worker.');
 
   const match = dataUri.match(/^data:([^;]+);base64,(.+)$/);
   if (!match) throw new Error('Invalid image data URI');
@@ -142,7 +184,7 @@ export default {
 
     try {
 
-      // POST /api/passes
+      // POST /api/passes — create pass
       if (path === '/api/passes' && request.method === 'POST') {
         const body      = await request.json();
         const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
@@ -197,15 +239,16 @@ export default {
       }
 
       // POST /api/notify
-      // Body: { pass_id: 'PASS-XXXXXXXX', title?, message }
-      // Resolves pass CODE → UUID via Supabase, then fires APNs push via v1 API
+      // Body: { pass_uuid?, pass_id?, title?, message }
+      //   - pass_uuid is preferred (instant). The frontend caches code→uuid in sessionStorage.
+      //   - pass_id (PASS-XXXXXXXX) works as fallback — resolved via Supabase or PassQR list API.
       if (path === '/api/notify' && request.method === 'POST') {
-        const { pass_id, message, title } = await request.json();
-        if (!pass_id) return json({ error: 'pass_id is required' }, 400);
+        const { pass_uuid, pass_id, message, title } = await request.json();
+        if (!pass_uuid && !pass_id) return json({ error: 'pass_uuid or pass_id is required' }, 400);
         if (!message) return json({ error: 'message is required' }, 400);
 
-        // Resolve PASS-CODE → UUID
-        const passUuid = await passCodeToUuid(env, pass_id);
+        // Use the UUID directly if provided, otherwise resolve from code.
+        const passUuid = pass_uuid || await passCodeToUuid(env, pass_id);
 
         // Fire APNs push via v1 API
         const res = await fetch(`${PASSQR_BASE}/passes/${passUuid}/push`, {
@@ -231,8 +274,7 @@ export default {
         return json({ success: true, ...d, message_sent: message, title_sent: title });
       }
 
-      // POST /api/template/image
-      // Body: { template_id?, type: 'logo'|'icon'|'strip', data: 'data:image/...;base64,...' }
+      // POST /api/template/image — Supabase secrets required
       if (path === '/api/template/image' && request.method === 'POST') {
         const body       = await request.json();
         const templateId = body.template_id || env.PASSQR_TEMPLATE_ID;
