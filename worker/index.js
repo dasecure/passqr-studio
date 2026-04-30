@@ -2,14 +2,15 @@
  * PassQR Studio — Cloudflare Worker
  * Proxies PassQR API, sends iotPush on pass creation, cleans up expired passes.
  *
- * Secrets (set via: wrangler secret put <NAME>):
- *   PASSQR_API_KEY     — Your PassQR API key
- *   PASSQR_TEMPLATE_ID — Default template ID
+ * Secrets (set via: wrangler secret put <NAME> OR Cloudflare dashboard):
+ *   PASSQR_API_KEY     — Your PassQR API key  (pqr_live_...)
+ *   PASSQR_TEMPLATE_ID — Default template UUID
  *   IOTPUSH_TOPIC      — iotPush topic name, e.g. "claude"
- *   IOTPUSH_API_KEY    — iotPush topic API key (from dashboard → topic → Private)
+ *   IOTPUSH_API_KEY    — iotPush topic API key (dashboard → topic → Private)
  */
 
-const PASSQR_BASE = 'https://api.passqr.com/v1';
+// ✅ Correct base URL — discovered from passqr-mcp-server source
+const PASSQR_BASE = 'https://www.passqr.com/api/v1';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -28,52 +29,40 @@ function passqrHeaders(env) {
   return {
     Authorization: `Bearer ${env.PASSQR_API_KEY}`,
     'Content-Type': 'application/json',
+    'User-Agent': 'passqr-studio/1.0',
   };
 }
 
 async function notifyIotPush(env, title, message) {
   const topic  = env.IOTPUSH_TOPIC   || 'claude';
-  const apiKey = env.IOTPUSH_API_KEY || '';           // required for private topics
-
+  const apiKey = env.IOTPUSH_API_KEY || '';
   const headers = {
-    'Content-Type': 'application/json',
-    Title:    title,
-    Priority: 'normal',
-    Tags:     'wallet,pass',
+    Title: title, Priority: 'normal', Tags: 'wallet,pass',
   };
-
-  // Private topics need the topic API key
   if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
-
   try {
     const res = await fetch(`https://www.iotpush.com/api/push/${topic}`, {
-      method: 'POST',
-      headers,
-      body: message,
+      method: 'POST', headers, body: message,
     });
     if (!res.ok) console.error('iotPush error:', res.status, await res.text());
-  } catch (e) {
-    console.error('iotPush failed:', e.message);
-  }
+  } catch (e) { console.error('iotPush failed:', e.message); }
 }
 
 export default {
   async fetch(request, env) {
-    if (request.method === 'OPTIONS') {
-      return new Response(null, { status: 204, headers: CORS });
-    }
+    if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
 
     const url  = new URL(request.url);
     const path = url.pathname.replace(/\/$/, '');
 
     try {
-      // POST /api/passes — create a pass (auto-expires in 24h)
+      // ── POST /api/passes — create pass (expires in 24h) ──────────────────
       if (path === '/api/passes' && request.method === 'POST') {
         const body      = await request.json();
         const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
         const res = await fetch(`${PASSQR_BASE}/passes`, {
-          method:  'POST',
+          method: 'POST',
           headers: passqrHeaders(env),
           body: JSON.stringify({
             template_id:  body.template_id || env.PASSQR_TEMPLATE_ID,
@@ -84,29 +73,33 @@ export default {
           }),
         });
 
-        const pass = await res.json();
-        if (!res.ok) return json({ error: pass }, res.status);
+        const payload = await res.json();
+        if (!res.ok) return json({ error: payload }, res.status);
+
+        // PassQR wraps response in { data: Pass }
+        const pass = payload.data ?? payload;
 
         await notifyIotPush(
           env,
           '🎫 New Demo Pass Created',
-          `Holder: ${body.holder_name} <${body.holder_email}>\nCode: ${pass.code}\nExpires: ${new Date(expiresAt).toUTCString()}\nLink: ${pass.public_url}`
+          `Holder: ${body.holder_name} <${body.holder_email}>\nCode: ${pass.code}\nExpires: ${new Date(expiresAt).toUTCString()}\nLink: ${pass.public_url ?? 'https://www.passqr.com/p/' + pass.code}`
         );
 
         return json(pass);
       }
 
-      // PATCH /api/passes/:id — update a pass
+      // ── PATCH /api/passes/:id ─────────────────────────────────────────────
       if (path.startsWith('/api/passes/') && request.method === 'PATCH') {
-        const id   = path.split('/')[3];
+        const id  = path.split('/')[3];
         const body = await request.json();
-        const res  = await fetch(`${PASSQR_BASE}/passes/${id}`, {
+        const res = await fetch(`${PASSQR_BASE}/passes/${id}`, {
           method: 'PATCH', headers: passqrHeaders(env), body: JSON.stringify(body),
         });
-        return json(await res.json(), res.status);
+        const p = await res.json();
+        return json(p.data ?? p, res.status);
       }
 
-      // DELETE /api/passes/:id
+      // ── DELETE /api/passes/:id ────────────────────────────────────────────
       if (path.startsWith('/api/passes/') && request.method === 'DELETE') {
         const id  = path.split('/')[3];
         const res = await fetch(`${PASSQR_BASE}/passes/${id}`, {
@@ -115,17 +108,18 @@ export default {
         return json({ deleted: res.ok }, res.status);
       }
 
-      // POST /api/notify — push a message to a specific pass
+      // ── POST /api/notify — push message to a pass ─────────────────────────
       if (path === '/api/notify' && request.method === 'POST') {
         const { pass_id, message, title } = await request.json();
         const res = await fetch(`${PASSQR_BASE}/passes/${pass_id}/messages`, {
           method: 'POST', headers: passqrHeaders(env),
           body: JSON.stringify({ message, title }),
         });
-        return json(await res.json(), res.status);
+        const d = await res.json();
+        return json(d, res.status);
       }
 
-      // PATCH /api/template — update template images / fields
+      // ── PATCH /api/template — update template images ──────────────────────
       if (path === '/api/template' && request.method === 'PATCH') {
         const body       = await request.json();
         const templateId = body.template_id || env.PASSQR_TEMPLATE_ID;
@@ -133,16 +127,8 @@ export default {
           method: 'PATCH', headers: passqrHeaders(env),
           body: JSON.stringify(body.updates),
         });
-        return json(await res.json(), res.status);
-      }
-
-      // GET /api/template — fetch template info
-      if (path === '/api/template' && request.method === 'GET') {
-        const templateId = url.searchParams.get('id') || env.PASSQR_TEMPLATE_ID;
-        const res        = await fetch(`${PASSQR_BASE}/templates/${templateId}`, {
-          headers: passqrHeaders(env),
-        });
-        return json(await res.json(), res.status);
+        const d = await res.json();
+        return json(d, res.status);
       }
 
       return json({ error: 'Not found' }, 404);
@@ -153,7 +139,7 @@ export default {
     }
   },
 
-  // Cron: runs every hour — deletes expired passes from PassQR
+  // ── Cron: every hour — revoke expired passes ──────────────────────────────
   async scheduled(event, env) {
     console.log('Cron: cleaning up expired passes...');
     try {
@@ -162,8 +148,9 @@ export default {
       });
       if (!res.ok) return;
 
-      const { passes = [] } = await res.json();
-      let deleted = 0;
+      const payload = await res.json();
+      const passes  = payload.data ?? payload.passes ?? [];
+      let deleted   = 0;
 
       for (const pass of passes) {
         const del = await fetch(`${PASSQR_BASE}/passes/${pass.id}`, {
@@ -173,14 +160,9 @@ export default {
       }
 
       if (deleted > 0) {
-        await notifyIotPush(
-          env,
-          '🗑️ PassQR Cleanup',
-          `Deleted ${deleted} expired pass${deleted !== 1 ? 'es' : ''}.`
-        );
+        await notifyIotPush(env, '🗑️ PassQR Cleanup',
+          `Deleted ${deleted} expired pass${deleted !== 1 ? 'es' : ''}.`);
       }
-    } catch (e) {
-      console.error('Cron error:', e.message);
-    }
+    } catch (e) { console.error('Cron error:', e.message); }
   },
 };
