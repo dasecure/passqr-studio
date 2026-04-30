@@ -16,13 +16,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-sans);min-hei
 header{position:sticky;top:0;z-index:100;background:rgba(7,11,20,0.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;height:56px;}
 .logo{font-family:var(--font-disp);font-size:1.05rem;font-weight:800;color:var(--text);text-decoration:none;display:flex;align-items:center;gap:8px;margin-right:32px;white-space:nowrap;}
 .logo-mark{width:28px;height:28px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:0.8rem;}
-nav{display:flex;gap:2px;flex:1;}
-.tab-btn{padding:6px 16px;background:none;border:none;cursor:pointer;color:var(--muted);font-family:var(--font-sans);font-size:0.88rem;font-weight:500;border-radius:var(--radius);transition:all 0.15s ease;position:relative;}
+nav{display:flex;gap:2px;flex:1;overflow-x:auto;}
+.tab-btn{padding:6px 14px;background:none;border:none;cursor:pointer;color:var(--muted);font-family:var(--font-sans);font-size:0.85rem;font-weight:500;border-radius:var(--radius);transition:all 0.15s ease;position:relative;white-space:nowrap;}
 .tab-btn:hover{color:var(--text);background:var(--surface);}
 .tab-btn.active{color:var(--accent2);background:rgba(79,126,255,0.1);}
-.tab-btn.active::after{content:'';position:absolute;bottom:-1px;left:16px;right:16px;height:2px;background:var(--accent);border-radius:2px;}
+.tab-btn.active::after{content:'';position:absolute;bottom:-1px;left:14px;right:14px;height:2px;background:var(--accent);border-radius:2px;}
 .header-actions{display:flex;gap:8px;align-items:center;margin-left:auto;}
-.demo-badge{display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:0.68rem;text-transform:uppercase;letter-spacing:0.06em;padding:4px 10px;border-radius:20px;background:rgba(0,214,143,0.1);color:var(--green);border:1px solid rgba(0,214,143,0.25);}
+.demo-badge{display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:0.68rem;text-transform:uppercase;letter-spacing:0.06em;padding:4px 10px;border-radius:20px;background:rgba(0,214,143,0.1);color:var(--green);border:1px solid rgba(0,214,143,0.25);white-space:nowrap;}
 main{max-width:1120px;margin:0 auto;padding:32px 24px 80px;}
 .tab-panel{display:none;}.tab-panel.active{display:block;}
 .grid-2{display:grid;grid-template-columns:1fr 400px;gap:24px;align-items:start;}
@@ -81,6 +81,8 @@ textarea{resize:vertical;min-height:80px;line-height:1.5;}
 .btn-outline:hover{border-color:var(--accent);color:var(--accent2);}
 .btn-ghost{background:var(--surface2);border:1px solid var(--border);color:var(--muted);}
 .btn-ghost:hover{color:var(--text);border-color:var(--border2);}
+.btn-green{background:rgba(0,214,143,0.15);border:1px solid rgba(0,214,143,0.35);color:var(--green);}
+.btn-green:hover{background:rgba(0,214,143,0.25);}
 .btn-lg{padding:14px 32px;font-size:1rem;border-radius:12px;}
 .btn-sm{padding:7px 14px;font-size:0.82rem;border-radius:7px;}
 .btn-full{width:100%;}
@@ -119,25 +121,80 @@ textarea{resize:vertical;min-height:80px;line-height:1.5;}
 .helper{font-size:0.78rem;color:var(--muted);margin-top:5px;}
 .badge{display:inline-flex;align-items:center;gap:4px;font-family:var(--font-mono);font-size:0.68rem;text-transform:uppercase;letter-spacing:0.06em;padding:3px 8px;border-radius:4px;}
 .badge-info{background:rgba(79,126,255,0.12);color:var(--accent2);border:1px solid rgba(79,126,255,0.2);}
+.badge-green{background:rgba(0,214,143,0.12);color:var(--green);border:1px solid rgba(0,214,143,0.25);}
 .section-title{font-family:var(--font-disp);font-size:0.82rem;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:14px;margin-top:4px;display:flex;align-items:center;gap:8px;}
 .section-title::after{content:'';flex:1;height:1px;background:var(--border);}
 .leaflet-container{background:#0d1221;}
 .leaflet-tile{filter:brightness(0.7) invert(1) hue-rotate(200deg) saturate(0.4) brightness(0.8);}
 .leaflet-control-attribution{background:rgba(13,18,33,0.8)!important;color:var(--muted)!important;font-size:0.65rem!important;}
 .leaflet-control-zoom a{background:var(--surface2)!important;color:var(--text)!important;border-color:var(--border)!important;}
+
+/* ── Geo-fence Simulator ─────────────────────────────────── */
+#sim-map{height:480px;border-radius:12px;overflow:hidden;border:1px solid var(--border);position:relative;}
+.sim-layout{display:grid;grid-template-columns:1fr 320px;gap:24px;align-items:start;}
+@media(max-width:860px){.sim-layout{grid-template-columns:1fr;}}
+.sim-panel{display:flex;flex-direction:column;gap:16px;}
+.zone-list{display:flex;flex-direction:column;gap:8px;max-height:200px;overflow-y:auto;}
+.zone-item{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;cursor:pointer;transition:all 0.15s;position:relative;}
+.zone-item:hover{border-color:var(--accent);}
+.zone-item.active-zone{border-color:var(--green);background:rgba(0,214,143,0.06);}
+.zone-item-name{font-weight:600;font-size:0.9rem;margin-bottom:2px;}
+.zone-item-meta{font-family:var(--font-mono);font-size:0.68rem;color:var(--muted);}
+.zone-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);position:absolute;top:14px;right:14px;transition:background 0.2s;}
+.zone-item.active-zone .zone-dot{background:var(--green);box-shadow:0 0 8px var(--green);}
+.sim-instructions{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;font-size:0.82rem;color:var(--muted);line-height:1.6;}
+.sim-instructions strong{color:var(--text);display:block;margin-bottom:4px;}
+.sim-status{font-family:var(--font-mono);font-size:0.78rem;padding:8px 12px;border-radius:8px;text-align:center;background:var(--surface2);border:1px solid var(--border);color:var(--muted);transition:all 0.3s;}
+.sim-status.inside{background:rgba(0,214,143,0.1);border-color:rgba(0,214,143,0.4);color:var(--green);}
+.sim-status.outside{background:var(--surface2);border-color:var(--border);color:var(--muted);}
+.empty-state{text-align:center;padding:32px 20px;color:var(--muted);}
+.empty-state .emo{font-size:2.5rem;margin-bottom:10px;}
+.empty-state p{font-size:0.88rem;line-height:1.6;}
+
+/* ── Phone notification mock ──────────────────────────────── */
+.phone-notif{
+  position:fixed;top:24px;left:50%;transform:translateX(-50%) translateY(-160px);
+  z-index:3000;
+  width:min(360px,calc(100vw - 32px));
+  background:rgba(20,22,30,0.96);
+  backdrop-filter:blur(20px);
+  border:1px solid rgba(255,255,255,0.12);
+  border-radius:20px;
+  padding:14px 16px;
+  display:flex;gap:12px;align-items:flex-start;
+  box-shadow:0 16px 60px rgba(0,0,0,0.7),0 0 0 1px rgba(255,255,255,0.05);
+  transition:transform 0.5s cubic-bezier(0.34,1.56,0.64,1),opacity 0.4s;
+  opacity:0;
+  pointer-events:none;
+}
+.phone-notif.show{transform:translateX(-50%) translateY(0);opacity:1;pointer-events:all;}
+.notif-icon{width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,#1F3A5F,#0F2040);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,0.4);}
+.notif-body{flex:1;min-width:0;}
+.notif-app{font-family:var(--font-mono);font-size:0.62rem;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:3px;display:flex;align-items:center;justify-content:space-between;}
+.notif-time{color:rgba(255,255,255,0.25);}
+.notif-title{font-weight:600;font-size:0.9rem;color:#fff;margin-bottom:2px;}
+.notif-msg{font-size:0.8rem;color:rgba(255,255,255,0.55);line-height:1.4;}
+.notif-dismiss{background:none;border:none;color:rgba(255,255,255,0.3);cursor:pointer;font-size:1.1rem;padding:2px 6px;border-radius:6px;transition:color 0.15s;flex-shrink:0;align-self:flex-start;}
+.notif-dismiss:hover{color:rgba(255,255,255,0.7);}
+.pulse-ring{position:absolute;border-radius:50%;border:2px solid var(--green);animation:pulseRing 1.5s ease-out infinite;pointer-events:none;}
+@keyframes pulseRing{0%{opacity:0.8;transform:scale(1);}100%{opacity:0;transform:scale(2);}}
 </style>
 </head>
 <body>
+
 <header>
   <a class="logo" href="#"><div class="logo-mark">🎫</div>PassQR Studio</a>
   <nav>
     <button class="tab-btn active" data-tab="create">Create Pass</button>
+    <button class="tab-btn" data-tab="geofence">📍 Geo-fence Demo</button>
     <button class="tab-btn" data-tab="notify">Notify</button>
     <button class="tab-btn" data-tab="images">Images</button>
   </nav>
   <div class="header-actions"><span class="demo-badge">✦ Live Demo</span></div>
 </header>
+
 <main>
+  <!-- ── CREATE TAB ─────────────────────────────────────────── -->
   <div id="tab-create" class="tab-panel active">
     <div class="grid-2">
       <div>
@@ -153,7 +210,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5;}
         <div class="card">
           <div class="card-header"><h3>Geo-fence</h3><span class="badge badge-info" style="margin-left:auto">Optional</span></div>
           <div class="card-body">
-            <p class="helper" style="margin-bottom:12px">Click the map or search to place a geo-fence.</p>
+            <p class="helper" style="margin-bottom:12px">Set a location — when the pass holder enters this area, their phone shows the pass on the lock screen automatically.</p>
             <div class="field">
               <label>Search Address</label>
               <div style="display:flex;gap:8px"><input type="text" id="geo-address" placeholder="e.g. 1 Raffles Place, Singapore" /><button class="btn btn-ghost btn-sm" id="geo-search-btn" style="white-space:nowrap">Search</button></div>
@@ -163,7 +220,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5;}
               <div class="field" style="margin-bottom:0"><label>Lat, Lng</label><input type="text" id="geo-coords" placeholder="1.2840, 103.8510" readonly /></div>
               <div class="field" style="margin-bottom:0"><label>Radius (m)</label><input type="number" id="geo-radius" value="200" min="50" max="5000" style="width:100px" /></div>
             </div>
-            <p class="helper" id="geo-hint">No location set.</p>
+            <p class="helper" id="geo-hint">No location set. Click map or search.</p>
           </div>
         </div>
       </div>
@@ -204,6 +261,50 @@ textarea{resize:vertical;min-height:80px;line-height:1.5;}
     </div>
   </div>
 
+  <!-- ── GEO-FENCE SIMULATOR TAB ────────────────────────────── -->
+  <div id="tab-geofence" class="tab-panel">
+    <div style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+      <div>
+        <h2 style="font-family:var(--font-disp);font-size:1.3rem;font-weight:700;margin-bottom:4px;">Geo-fence Simulator</h2>
+        <p style="color:var(--muted);font-size:0.88rem;">Drag the 🧑 marker into a zone to simulate what happens on the phone. Create passes with a geo-fence set to add zones here.</p>
+      </div>
+      <button class="btn btn-green" id="walk-in-btn" style="display:none">▶ Walk into Zone</button>
+    </div>
+
+    <div class="sim-layout">
+      <div>
+        <div id="sim-map"></div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap;">
+          <span style="display:flex;align-items:center;gap:6px;font-size:0.78rem;color:var(--muted)"><span style="width:12px;height:12px;border-radius:50%;background:#4F7EFF;border:2px solid rgba(79,126,255,0.5);display:inline-block"></span> Geo-fence zone</span>
+          <span style="display:flex;align-items:center;gap:6px;font-size:0.78rem;color:var(--muted)"><span style="font-size:1rem">🧑</span> Drag to simulate position</span>
+          <span style="display:flex;align-items:center;gap:6px;font-size:0.78rem;color:var(--muted)"><span style="width:10px;height:10px;border-radius:50%;background:var(--green);display:inline-block;box-shadow:0 0 6px var(--green)"></span> Inside zone</span>
+        </div>
+      </div>
+
+      <div class="sim-panel">
+        <div class="card">
+          <div class="card-header"><h3>Zones</h3><span class="badge badge-info" id="zone-count" style="margin-left:auto">0</span></div>
+          <div class="card-body" style="padding:12px;">
+            <div class="zone-list" id="zone-list">
+              <div class="empty-state">
+                <div class="emo">📍</div>
+                <p>No zones yet.<br/>Create a pass with a<br/>geo-fence location set.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="sim-status" class="sim-status outside">📡 Outside all zones</div>
+
+        <div class="sim-instructions">
+          <strong>How this works on a real device</strong>
+          When a pass has a location set, Apple Wallet and Google Wallet use the device's GPS to monitor the zone. When the holder physically enters the area, the OS shows the pass as a lock screen notification — no app open, no internet needed.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── NOTIFY TAB ─────────────────────────────────────────── -->
   <div id="tab-notify" class="tab-panel">
     <div class="notify-wrap">
       <div class="card">
@@ -219,6 +320,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5;}
     </div>
   </div>
 
+  <!-- ── IMAGES TAB ─────────────────────────────────────────── -->
   <div id="tab-images" class="tab-panel">
     <div class="card" style="max-width:640px">
       <div class="card-header"><h3>Template Images</h3></div>
@@ -239,6 +341,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5;}
   </div>
 </main>
 
+<!-- ── Success Modal ──────────────────────────────────────── -->
 <div class="modal-overlay" id="success-modal">
   <div class="modal">
     <div class="modal-head"><h2>🎉 Pass Created!</h2><button class="btn btn-ghost btn-sm" onclick="closeSuccess()">✕</button></div>
@@ -253,35 +356,62 @@ textarea{resize:vertical;min-height:80px;line-height:1.5;}
         <a id="google-link" href="#" target="_blank" class="wallet-btn">🔵 Google Wallet</a>
       </div>
       <a id="whatsapp-link" href="#" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:12px">📲 Share via WhatsApp</a>
+      <div style="background:rgba(0,214,143,0.08);border:1px solid rgba(0,214,143,0.2);border-radius:10px;padding:12px 14px;margin-bottom:12px;text-align:left;" id="geo-fence-notice" style="display:none">
+        <div style="font-size:0.78rem;color:var(--green);font-weight:600;margin-bottom:4px;">📍 Geo-fence attached</div>
+        <div style="font-size:0.78rem;color:var(--muted);">When the holder physically enters the zone, this pass will appear on their lock screen automatically. Try the <strong style="color:var(--text)">Geo-fence Demo</strong> tab to simulate it.</div>
+      </div>
       <button class="btn btn-ghost btn-sm btn-full" onclick="closeSuccess()">Done</button>
     </div>
   </div>
 </div>
 
+<!-- ── Phone notification mock ───────────────────────────── -->
+<div class="phone-notif" id="phone-notif">
+  <div class="notif-icon">🎫</div>
+  <div class="notif-body">
+    <div class="notif-app"><span>Wallet</span><span class="notif-time" id="notif-time">now</span></div>
+    <div class="notif-title" id="notif-title">Pass nearby</div>
+    <div class="notif-msg" id="notif-msg">You're near a location linked to your pass.</div>
+  </div>
+  <button class="notif-dismiss" onclick="dismissNotif()">✕</button>
+</div>
+
 <div class="toast" id="toast"><div class="dot"></div><span id="toast-msg"></span></div>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-// ─── Demo config — no user input required ────────────────────────────────────
+// ─── Demo config ──────────────────────────────────────────────────────────────
 const WORKER_URL  = 'https://passqr-studio-worker.vincent-513.workers.dev';
 const TEMPLATE_ID = 'de23a11e-a369-4d07-8f72-2df7cb1b0d87';
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Persistent zone storage for this session
+let zones = JSON.parse(sessionStorage.getItem('pqr_zones')||'[]');
+
+function saveZones(){ sessionStorage.setItem('pqr_zones', JSON.stringify(zones)); }
+
+// ── Expiry string
 const expiryStr=(()=>{const d=new Date(Date.now()+24*60*60*1000);return d.toLocaleDateString('en-SG',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});})();
 document.getElementById('back-expiry').textContent=expiryStr;
 
+// ── Tab switching
 document.querySelectorAll('.tab-btn').forEach(btn=>{
   btn.addEventListener('click',()=>{
     document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
     document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
     btn.classList.add('active');
-    document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+    const tid='tab-'+btn.dataset.tab;
+    document.getElementById(tid).classList.add('active');
+    if(btn.dataset.tab==='geofence') initSimMap();
   });
 });
 
+// ── Create pass preview
 document.getElementById('holder-name').addEventListener('input',e=>{const v=e.target.value||'Your Name';document.getElementById('prev-name').textContent=v;document.getElementById('back-name').textContent=v;});
 document.getElementById('holder-email').addEventListener('input',e=>{const v=e.target.value||'email@example.com';document.getElementById('prev-email').textContent=v;document.getElementById('back-email').textContent=v;});
 document.getElementById('flip-btn').addEventListener('click',()=>document.getElementById('pass-card').classList.toggle('flipped'));
 
+// ── Create tab map
 let map,marker,circle;
 function initMap(){
   map=L.map('map').setView([1.3521,103.8198],12);
@@ -306,6 +436,7 @@ document.getElementById('geo-search-btn').addEventListener('click',async()=>{
   btn.textContent='Search';btn.disabled=false;
 });
 
+// ── Image uploads
 const images={logo:null,icon:null,strip:null};
 function triggerUpload(t){document.getElementById('upload-'+t).click();}
 function handleImageUpload(input,type){
@@ -325,12 +456,14 @@ function clearImages(){
   document.getElementById('prev-logo').innerHTML='🎫';document.getElementById('prev-strip').innerHTML='';
 }
 
+// ── API helper
 async function apiCall(method,path,body){
   const res=await fetch(WORKER_URL+path,{method,headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
   if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(typeof e.error==='string'?e.error:e.message||JSON.stringify(e)||`HTTP ${res.status}`);}
   return res.json();
 }
 
+// ── Create pass
 document.getElementById('create-btn').addEventListener('click',async()=>{
   const name=document.getElementById('holder-name').value.trim();
   const email=document.getElementById('holder-email').value.trim();
@@ -343,12 +476,19 @@ document.getElementById('create-btn').addEventListener('click',async()=>{
   if(coords){const[la,ln]=coords.split(',').map(Number);if(!isNaN(la)&&!isNaN(ln))locs=[{latitude:la,longitude:ln,radius:parseInt(document.getElementById('geo-radius').value)||200,message:`Welcome, ${name}!`}];}
   try{
     const pass=await apiCall('POST','/api/passes',{template_id:TEMPLATE_ID,holder_name:name,holder_email:email,data:{locations:locs}});
-    showSuccess(pass);
+    // Save zone for simulator
+    if(locs.length){
+      const la=locs[0].latitude,ln=locs[0].longitude,r=locs[0].radius;
+      zones.push({id:pass.code||pass.id,name:name,code:pass.code||pass.id,lat:la,lng:ln,radius:r,msg:`Welcome, ${name}!`});
+      saveZones();
+      renderZoneList();
+    }
+    showSuccess(pass, locs.length>0);
   }catch(e){toast('Error: '+e.message,'error');}
   btn.disabled=false;t.textContent='Create Pass →';
 });
 
-function showSuccess(pass){
+function showSuccess(pass, hasGeo){
   const code=pass.code||pass.id||'—';
   const pub=`https://www.passqr.com/p/${code}`;
   document.getElementById('result-code').textContent=code;
@@ -358,12 +498,14 @@ function showSuccess(pass){
   document.getElementById('whatsapp-link').href=`https://wa.me/?text=${encodeURIComponent('Your demo wallet pass is ready: '+pub)}`;
   document.getElementById('qr-img').src=`https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=10&color=070B14&bgcolor=FFFFFF&data=${encodeURIComponent(pub)}`;
   document.getElementById('desktop-hint').style.display=/Mobi|Android|iPhone/i.test(navigator.userAgent)?'none':'block';
+  document.getElementById('geo-fence-notice').style.display=hasGeo?'block':'none';
   document.getElementById('success-modal').classList.add('open');
 }
 function closeSuccess(){document.getElementById('success-modal').classList.remove('open');}
 document.getElementById('success-modal').addEventListener('click',e=>{if(e.target===document.getElementById('success-modal'))closeSuccess();});
 function copyUrl(){navigator.clipboard.writeText(document.getElementById('result-url').textContent).then(()=>toast('Copied!','success'));}
 
+// ── Images push
 document.getElementById('push-images-btn').addEventListener('click',async()=>{
   if(!images.logo&&!images.icon&&!images.strip){toast('Upload at least one image first','error');return;}
   const btn=document.getElementById('push-images-btn');btn.innerHTML='<span class="spinner"></span> Pushing…';btn.disabled=true;
@@ -373,6 +515,7 @@ document.getElementById('push-images-btn').addEventListener('click',async()=>{
   btn.innerHTML='Push to Template →';btn.disabled=false;
 });
 
+// ── Notify
 document.getElementById('notify-btn').addEventListener('click',async()=>{
   const code=document.getElementById('notify-code').value.trim().toUpperCase();
   const title=document.getElementById('notify-title').value.trim();
@@ -385,13 +528,193 @@ document.getElementById('notify-btn').addEventListener('click',async()=>{
   btn.innerHTML='Send Notification →';btn.disabled=false;
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// GEO-FENCE SIMULATOR
+// ─────────────────────────────────────────────────────────────────────────────
+let simMap=null, simPersonMarker=null, simZoneLayers=[];
+let insideZone=null, notifTimer=null;
+
+const personIcon = L.divIcon({
+  html: '<div style="font-size:1.5rem;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5))">🧑</div>',
+  iconSize:[30,30], iconAnchor:[15,28], className:''
+});
+
+function initSimMap(){
+  if(simMap) return; // already initialised
+
+  simMap=L.map('sim-map').setView([1.3521,103.8198],14);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(simMap);
+
+  // Draggable person marker
+  simPersonMarker=L.marker([1.3521,103.8198],{icon:personIcon,draggable:true,zIndexOffset:1000}).addTo(simMap);
+  simPersonMarker.on('drag',checkZones);
+  simPersonMarker.on('dragend',checkZones);
+
+  // Allow clicking map to teleport person
+  simMap.on('click',e=>{
+    simPersonMarker.setLatLng(e.latlng);
+    checkZones();
+  });
+
+  renderSimZones();
+  renderZoneList();
+}
+
+function renderSimZones(){
+  if(!simMap) return;
+  // Clear old layers
+  simZoneLayers.forEach(l=>simMap.removeLayer(l));
+  simZoneLayers=[];
+
+  if(!zones.length) return;
+
+  // Fit map to all zones
+  const bounds=[];
+  zones.forEach(z=>{
+    const c=L.circle([z.lat,z.lng],{
+      color:'#4F7EFF',fillColor:'#4F7EFF',fillOpacity:0.12,
+      weight:2,radius:z.radius,dashArray:'6 4'
+    }).addTo(simMap);
+    const pin=L.circleMarker([z.lat,z.lng],{
+      color:'#4F7EFF',fillColor:'#4F7EFF',fillOpacity:0.9,radius:7,
+    }).bindTooltip(`<b>${z.name}</b><br/><span style="font-family:monospace;font-size:0.7rem">${z.code}</span>`,{permanent:false}).addTo(simMap);
+    simZoneLayers.push(c,pin);
+    bounds.push([z.lat,z.lng]);
+  });
+
+  if(bounds.length) simMap.fitBounds(L.latLngBounds(bounds).pad(0.5));
+
+  // Show walk-in button if zones exist
+  document.getElementById('walk-in-btn').style.display=zones.length?'':'none';
+}
+
+function checkZones(){
+  if(!simPersonMarker||!zones.length) return;
+  const pos=simPersonMarker.getLatLng();
+  let foundZone=null;
+
+  zones.forEach(z=>{
+    const dist=simMap.distance(pos,[z.lat,z.lng]);
+    if(dist<=z.radius) foundZone=z;
+  });
+
+  const statusEl=document.getElementById('sim-status');
+
+  if(foundZone && foundZone!==insideZone){
+    insideZone=foundZone;
+    statusEl.className='sim-status inside';
+    statusEl.textContent=`✅ Inside zone: ${foundZone.name}`;
+    // Update zone list highlight
+    renderZoneList(foundZone.id);
+    // Show phone notification
+    showPhoneNotif(foundZone);
+    // Add pulse rings on the zone centre
+    addPulseRings(foundZone);
+  } else if(!foundZone && insideZone){
+    insideZone=null;
+    statusEl.className='sim-status outside';
+    statusEl.textContent='📡 Outside all zones';
+    renderZoneList(null);
+    dismissNotif();
+  }
+}
+
+function addPulseRings(zone){
+  if(!simMap) return;
+  const latlng=[zone.lat,zone.lng];
+  // Create 3 staggered pulse rings as SVG circles via Leaflet
+  [0,400,800].forEach(delay=>{
+    setTimeout(()=>{
+      const ring=L.circle(latlng,{
+        radius:zone.radius*0.6,color:'#00D68F',fill:false,weight:2,opacity:0.8
+      }).addTo(simMap);
+      // Animate via CSS — remove after animation
+      setTimeout(()=>simMap.removeLayer(ring),1600);
+    },delay);
+  });
+}
+
+// Walk-in button: animate person from outside → inside first zone
+document.getElementById('walk-in-btn').addEventListener('click',()=>{
+  if(!zones.length||!simMap) return;
+  const z=zones[0];
+  // Start outside the zone boundary
+  const startLat=z.lat+(z.radius/111000)*2.5;
+  const startLng=z.lng;
+  simPersonMarker.setLatLng([startLat,startLng]);
+  simMap.panTo([z.lat,z.lng]);
+  insideZone=null; // reset so entry fires again
+
+  let step=0;
+  const steps=40;
+  const interval=setInterval(()=>{
+    step++;
+    const t=step/steps;
+    const lat=startLat+(z.lat-startLat)*t;
+    const lng=startLng+(z.lng-startLng)*t;
+    simPersonMarker.setLatLng([lat,lng]);
+    checkZones();
+    if(step>=steps) clearInterval(interval);
+  },40);
+});
+
+function renderZoneList(activeId=null){
+  const list=document.getElementById('zone-list');
+  const count=document.getElementById('zone-count');
+  count.textContent=zones.length;
+
+  if(!zones.length){
+    list.innerHTML='<div class="empty-state"><div class="emo">📍</div><p>No zones yet.<br/>Create a pass with a<br/>geo-fence location set.</p></div>';
+    document.getElementById('walk-in-btn').style.display='none';
+    return;
+  }
+  document.getElementById('walk-in-btn').style.display='';
+  list.innerHTML=zones.map(z=>`
+    <div class="zone-item ${activeId===z.id?'active-zone':''}" onclick="focusZone('${z.id}')">
+      <div class="zone-dot"></div>
+      <div class="zone-item-name">${escHtml(z.name)}</div>
+      <div class="zone-item-meta">${escHtml(z.code)} · ${z.radius}m radius</div>
+    </div>
+  `).join('');
+}
+
+function focusZone(id){
+  const z=zones.find(x=>x.id===id);
+  if(!z||!simMap) return;
+  simMap.flyTo([z.lat,z.lng],16,{duration:0.8});
+}
+
+// ── Phone notification
+let notifVisible=false;
+function showPhoneNotif(zone){
+  const el=document.getElementById('phone-notif');
+  const now=new Date().toLocaleTimeString('en-SG',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('notif-time').textContent=now;
+  document.getElementById('notif-title').textContent='Pass nearby — '+zone.name;
+  document.getElementById('notif-msg').textContent=zone.msg||`You've entered the zone for pass ${zone.code}.`;
+  el.classList.add('show');
+  notifVisible=true;
+  clearTimeout(notifTimer);
+  notifTimer=setTimeout(()=>{if(notifVisible)dismissNotif();},6000);
+}
+function dismissNotif(){
+  document.getElementById('phone-notif').classList.remove('show');
+  notifVisible=false;
+}
+
+function escHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+// ── Toast
 let tt;
 function toast(msg,type='success'){
   const el=document.getElementById('toast');el.className=`toast ${type}`;
   document.getElementById('toast-msg').textContent=msg;el.classList.add('show');
   clearTimeout(tt);tt=setTimeout(()=>el.classList.remove('show'),3200);
 }
+
+// ── Init
 initMap();
+renderZoneList();
 </script>
 </body>
 </html>
