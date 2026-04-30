@@ -1,12 +1,5 @@
 /**
  * PassQR Studio — Cloudflare Worker
- * Proxies PassQR API, sends iotPush on pass creation, cleans up expired passes.
- *
- * Secrets:
- *   PASSQR_API_KEY     — pqr_live_...
- *   PASSQR_TEMPLATE_ID — template UUID
- *   IOTPUSH_TOPIC      — e.g. "claude"
- *   IOTPUSH_API_KEY    — iotPush topic API key
  */
 
 const PASSQR_BASE = 'https://www.passqr.com/api/v1';
@@ -24,6 +17,17 @@ function json(data, status = 200) {
   });
 }
 
+// Flatten any API error into a plain string
+function errMsg(payload) {
+  if (!payload) return 'Unknown error';
+  if (typeof payload === 'string') return payload;
+  // PassQR returns { error: "msg" } or { message: "msg" } or { error: { message: "msg" } }
+  const e = payload.error ?? payload;
+  if (typeof e === 'string') return e;
+  if (typeof e === 'object') return e.message ?? e.msg ?? JSON.stringify(e);
+  return payload.message ?? JSON.stringify(payload);
+}
+
 function passqrHeaders(env) {
   return {
     Authorization: `Bearer ${env.PASSQR_API_KEY}`,
@@ -32,7 +36,6 @@ function passqrHeaders(env) {
   };
 }
 
-// Build wallet URLs from pass code (API does not return these)
 function walletUrls(code) {
   return {
     apple:  `${PASSQR_WEB}/api/wallet/apple?code=${code}`,
@@ -50,7 +53,7 @@ async function notifyIotPush(env, title, message) {
     const res = await fetch(`https://www.iotpush.com/api/push/${topic}`, {
       method: 'POST', headers, body: message,
     });
-    if (!res.ok) console.error('iotPush error:', res.status, await res.text());
+    if (!res.ok) console.error('iotPush:', res.status, await res.text());
   } catch (e) { console.error('iotPush failed:', e.message); }
 }
 
@@ -62,6 +65,7 @@ export default {
     const path = url.pathname.replace(/\/$/, '');
 
     try {
+
       // POST /api/passes
       if (path === '/api/passes' && request.method === 'POST') {
         const body      = await request.json();
@@ -80,16 +84,19 @@ export default {
         });
 
         const payload = await res.json();
-        if (!res.ok) return json({ error: payload }, res.status);
+
+        if (!res.ok) {
+          // Log full error to worker console for debugging
+          console.error('PassQR create error:', JSON.stringify(payload));
+          return json({ error: errMsg(payload) }, res.status);
+        }
 
         const pass   = payload.data ?? payload;
         const urls   = walletUrls(pass.code);
-
-        // Augment pass with wallet URLs before returning
         const result = { ...pass, ...urls, wallet: urls };
 
         await notifyIotPush(env, '🎫 New Demo Pass Created',
-          `Holder: ${body.holder_name} <${body.holder_email}>\nCode: ${pass.code}\nExpires: ${new Date(expiresAt).toUTCString()}\nLink: ${urls.public}`);
+          `Holder: ${body.holder_name} <${body.holder_email}>\nCode: ${pass.code}\nLink: ${urls.public}`);
 
         return json(result);
       }
@@ -102,7 +109,8 @@ export default {
           method: 'PATCH', headers: passqrHeaders(env), body: JSON.stringify(body),
         });
         const p = await res.json();
-        return json(p.data ?? p, res.status);
+        if (!res.ok) return json({ error: errMsg(p) }, res.status);
+        return json(p.data ?? p);
       }
 
       // DELETE /api/passes/:id
@@ -122,7 +130,8 @@ export default {
           body: JSON.stringify({ message, title }),
         });
         const d = await res.json();
-        return json(d, res.status);
+        if (!res.ok) return json({ error: errMsg(d) }, res.status);
+        return json(d);
       }
 
       // PATCH /api/template
@@ -134,14 +143,15 @@ export default {
           body: JSON.stringify(body.updates),
         });
         const d = await res.json();
-        return json(d, res.status);
+        if (!res.ok) return json({ error: errMsg(d) }, res.status);
+        return json(d);
       }
 
       return json({ error: 'Not found' }, 404);
 
     } catch (err) {
-      console.error(err);
-      return json({ error: err.message }, 500);
+      console.error('Worker error:', err);
+      return json({ error: err.message ?? String(err) }, 500);
     }
   },
 
