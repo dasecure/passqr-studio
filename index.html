@@ -378,9 +378,13 @@ const WORKER_URL  = 'https://passqr-studio-worker.vincent-513.workers.dev';
 const TEMPLATE_ID = 'de23a11e-a369-4d07-8f72-2df7cb1b0d87';
 const WALLET_REDIRECT = 'https://dasecure.github.io/passqr-studio/wallet.html';
 
+// Apple Wallet → passqr.com Next.js route (signed .pkpass via Vercel certs)
+// Google Wallet → Supabase edge function passqr-demo-wallet (signed JWT via Supabase secrets)
+// Two hosts because each platform's credentials live in a different place.
+const APPLE_WALLET_BASE  = 'https://www.passqr.com/api/wallet/apple';
+const GOOGLE_WALLET_BASE = 'https://gyllfnsnniuqaarsulsk.supabase.co/functions/v1/passqr-demo-wallet';
+
 // ── Pass cache: code → { uuid, name, createdAt } ──────────────────────────────
-// Stored in sessionStorage from create_pass responses so the Notify tab can
-// send pass_uuid directly to the worker, skipping the slow code→UUID lookup.
 let passCache = JSON.parse(sessionStorage.getItem('pqr_pass_cache') || '{}');
 function savePassCache(){ sessionStorage.setItem('pqr_pass_cache', JSON.stringify(passCache)); }
 function rememberPass(pass, holderName){
@@ -480,8 +484,8 @@ function showSuccess(pass,hasGeo){
   const qrTarget=`${WALLET_REDIRECT}?code=${code}`;
   document.getElementById('result-code').textContent=code;
   document.getElementById('result-url').textContent=pub;
-  document.getElementById('apple-link').href=`https://www.passqr.com/api/wallet/apple?code=${code}`;
-  document.getElementById('google-link').href=`https://www.passqr.com/api/wallet/google?code=${code}`;
+  document.getElementById('apple-link').href=`${APPLE_WALLET_BASE}?code=${code}`;
+  document.getElementById('google-link').href=`${GOOGLE_WALLET_BASE}?code=${code}`;
   document.getElementById('whatsapp-link').href=`https://wa.me/?text=${encodeURIComponent('Your demo pass: '+pub)}`;
   document.getElementById('qr-img').src=`https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=10&color=070B14&bgcolor=FFFFFF&data=${encodeURIComponent(qrTarget)}`;
   document.getElementById('qr-img').onclick=()=>window.open(qrTarget,'_blank');
@@ -508,7 +512,6 @@ document.getElementById('push-images-btn').addEventListener('click',async()=>{
   btn.innerHTML='Push to Template →';btn.disabled=false;
 });
 
-// ── Notify: prefer cached UUID for instant push, fall back to code lookup ────
 function renderRecentPasses(){
   const wrap=document.getElementById('recent-passes-wrap');
   const list=document.getElementById('recent-passes');
