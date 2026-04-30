@@ -5,14 +5,6 @@
 const PASSQR_BASE = 'https://www.passqr.com/api/v1';
 const PASSQR_WEB  = 'https://www.passqr.com';
 
-// Required fields for template 04305a8d (Sin Chew Alarm)
-// These match the template's default values so passes always validate
-const TEMPLATE_FIELD_DEFAULTS = {
-  url_field:   'https://dasecure.github.io/passqr-studio/interest.html',
-  email_field: 'demo@passqr.com',
-  phone_field: '+65 6287 2788',
-};
-
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
@@ -25,7 +17,6 @@ function json(data, status = 200) {
   });
 }
 
-// Flatten any API error into a plain readable string
 function errMsg(payload) {
   if (!payload) return 'Unknown error';
   if (typeof payload === 'string') return payload;
@@ -78,14 +69,6 @@ export default {
         const body      = await request.json();
         const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
-        // Merge template required field defaults with any caller-supplied data
-        const data = {
-          ...TEMPLATE_FIELD_DEFAULTS,
-          ...(body.data || {}),
-          // Always override interest form URL to point at the demo page
-          url_field: 'https://dasecure.github.io/passqr-studio/interest.html',
-        };
-
         const res = await fetch(`${PASSQR_BASE}/passes`, {
           method: 'POST',
           headers: passqrHeaders(env),
@@ -94,7 +77,7 @@ export default {
             holder_name:  body.holder_name,
             holder_email: body.holder_email,
             expires_at:   expiresAt,
-            data,
+            data:         body.data || {},
           }),
         });
 
@@ -109,7 +92,7 @@ export default {
         const urls   = walletUrls(pass.code);
         const result = { ...pass, ...urls, wallet: urls };
 
-        await notifyIotPush(env, '🎫 New Demo Pass Created',
+        await notifyIotPush(env, '\uD83C\uDFAB New Demo Pass Created',
           `Holder: ${body.holder_name} <${body.holder_email}>\nCode: ${pass.code}\nLink: ${urls.public}`);
 
         return json(result);
@@ -185,7 +168,7 @@ export default {
         if (del.ok) deleted++;
       }
       if (deleted > 0) {
-        await notifyIotPush(env, '🗑️ PassQR Cleanup',
+        await notifyIotPush(env, '\uD83D\uDDD1\uFE0F PassQR Cleanup',
           `Deleted ${deleted} expired pass${deleted !== 1 ? 'es' : ''}.`);
       }
     } catch (e) { console.error('Cron error:', e.message); }
