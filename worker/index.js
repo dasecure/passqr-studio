@@ -5,6 +5,14 @@
 const PASSQR_BASE = 'https://www.passqr.com/api/v1';
 const PASSQR_WEB  = 'https://www.passqr.com';
 
+// Required fields for template 04305a8d (Sin Chew Alarm)
+// These match the template's default values so passes always validate
+const TEMPLATE_FIELD_DEFAULTS = {
+  url_field:   'https://dasecure.github.io/passqr-studio/interest.html',
+  email_field: 'demo@passqr.com',
+  phone_field: '+65 6287 2788',
+};
+
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
@@ -17,11 +25,10 @@ function json(data, status = 200) {
   });
 }
 
-// Flatten any API error into a plain string
+// Flatten any API error into a plain readable string
 function errMsg(payload) {
   if (!payload) return 'Unknown error';
   if (typeof payload === 'string') return payload;
-  // PassQR returns { error: "msg" } or { message: "msg" } or { error: { message: "msg" } }
   const e = payload.error ?? payload;
   if (typeof e === 'string') return e;
   if (typeof e === 'object') return e.message ?? e.msg ?? JSON.stringify(e);
@@ -71,6 +78,14 @@ export default {
         const body      = await request.json();
         const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
+        // Merge template required field defaults with any caller-supplied data
+        const data = {
+          ...TEMPLATE_FIELD_DEFAULTS,
+          ...(body.data || {}),
+          // Always override interest form URL to point at the demo page
+          url_field: 'https://dasecure.github.io/passqr-studio/interest.html',
+        };
+
         const res = await fetch(`${PASSQR_BASE}/passes`, {
           method: 'POST',
           headers: passqrHeaders(env),
@@ -79,14 +94,13 @@ export default {
             holder_name:  body.holder_name,
             holder_email: body.holder_email,
             expires_at:   expiresAt,
-            data:         body.data || {},
+            data,
           }),
         });
 
         const payload = await res.json();
 
         if (!res.ok) {
-          // Log full error to worker console for debugging
           console.error('PassQR create error:', JSON.stringify(payload));
           return json({ error: errMsg(payload) }, res.status);
         }
