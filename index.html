@@ -72,7 +72,6 @@ textarea{resize:vertical;min-height:80px;line-height:1.5;}
 @media(max-width:640px){#sim-map{height:280px;}}
 .pass-preview-wrap{position:sticky;top:0;}
 @media(max-width:960px){.pass-preview-wrap{position:static;}}
-/* ── Pass card: 240px gives enough room for 5 back rows ── */
 .pass-flip-container{perspective:1000px;height:240px;margin-bottom:12px;}
 .pass-card{width:100%;height:240px;position:relative;transform-style:preserve-3d;transition:transform 0.6s cubic-bezier(0.4,0,0.2,1);}
 .pass-card.flipped{transform:rotateY(180deg);}
@@ -90,7 +89,6 @@ textarea{resize:vertical;min-height:80px;line-height:1.5;}
 .pass-tier{display:inline-block;background:rgba(79,126,255,0.25);border:1px solid rgba(79,126,255,0.4);color:var(--accent2);font-family:var(--font-mono);font-size:0.58rem;font-weight:500;text-transform:uppercase;letter-spacing:0.07em;padding:2px 6px;border-radius:4px;margin-top:3px;}
 .pass-expiry{font-family:var(--font-mono);font-size:0.58rem;color:var(--red);text-align:right;}
 .pass-qr-icon{width:36px;height:36px;background:rgba(255,255,255,0.9);border-radius:6px;align-self:flex-end;display:flex;align-items:center;justify-content:center;font-size:1.2rem;}
-/* back rows: flex fills available height evenly */
 .back-row{display:flex;justify-content:space-between;align-items:center;flex:1;padding:0;border-bottom:1px solid rgba(28,37,64,0.7);}
 .back-row:last-child{border-bottom:none;}
 .back-key{font-family:var(--font-mono);font-size:0.58rem;color:var(--muted);text-transform:uppercase;flex-shrink:0;}
@@ -179,6 +177,11 @@ textarea{resize:vertical;min-height:80px;line-height:1.5;}
 .notif-msg{font-size:0.78rem;color:rgba(255,255,255,0.55);line-height:1.4;}
 .notif-dismiss{background:none;border:none;color:rgba(255,255,255,0.3);cursor:pointer;font-size:1rem;padding:2px 6px;border-radius:6px;transition:color 0.15s;flex-shrink:0;}
 .notif-dismiss:hover{color:rgba(255,255,255,0.7);}
+.recent-passes{display:flex;flex-direction:column;gap:6px;margin-top:6px;}
+.recent-pass{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-family:var(--font-mono);font-size:0.72rem;transition:all 0.15s;}
+.recent-pass:hover{border-color:var(--accent);background:rgba(79,126,255,0.05);}
+.recent-pass .code{color:var(--green);font-weight:500;letter-spacing:0.05em;}
+.recent-pass .name{color:var(--muted);flex:1;font-family:var(--font-sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .leaflet-container{background:#0d1221;}
 .leaflet-tile{filter:brightness(0.7) invert(1) hue-rotate(200deg) saturate(0.4) brightness(0.8);}
 .leaflet-control-attribution{background:rgba(13,18,33,0.8)!important;color:var(--muted)!important;font-size:0.6rem!important;}
@@ -288,9 +291,13 @@ textarea{resize:vertical;min-height:80px;line-height:1.5;}
       <div class="card">
         <div class="card-header"><h3>Push Notification</h3></div>
         <div class="card-body">
-          <p class="helper" style="margin-bottom:4px">Trigger an Apple Wallet push update for a specific pass. The holder's phone re-fetches the pass from the server.</p>
-          <p class="helper" style="margin-bottom:16px;color:var(--amber)">⚠️ Requires PassQR Pro plan and the Supabase secrets to be set in the Cloudflare worker.</p>
+          <p class="helper" style="margin-bottom:4px">Trigger an Apple Wallet push update for a pass. The holder's phone re-fetches the pass from PassQR.</p>
+          <p class="helper" style="margin-bottom:16px;color:var(--amber)">⚠️ Requires PassQR Pro plan. Pass must be installed on at least one device with notifications enabled.</p>
           <div class="field"><label>Pass Code <span class="req">*</span></label><input type="text" id="notify-code" class="pass-code-input" placeholder="PASS-XXXXXXXX" autocomplete="off" /></div>
+          <div id="recent-passes-wrap" style="display:none;margin-bottom:14px">
+            <p style="font-size:0.7rem;color:var(--muted);margin-bottom:6px;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.06em">Recent passes — tap to use</p>
+            <div class="recent-passes" id="recent-passes"></div>
+          </div>
           <div class="field"><label>Title</label><input type="text" id="notify-title" placeholder="e.g. Service Reminder" /></div>
           <div class="field"><label>Message <span class="req">*</span></label><textarea id="notify-message" placeholder="e.g. Your service visit is tomorrow at 10am."></textarea></div>
           <button class="btn btn-primary btn-full" id="notify-btn" style="margin-top:4px">Send Push →</button>
@@ -371,6 +378,17 @@ const WORKER_URL  = 'https://passqr-studio-worker.vincent-513.workers.dev';
 const TEMPLATE_ID = 'de23a11e-a369-4d07-8f72-2df7cb1b0d87';
 const WALLET_REDIRECT = 'https://dasecure.github.io/passqr-studio/wallet.html';
 
+// ── Pass cache: code → { uuid, name, createdAt } ──────────────────────────────
+// Stored in sessionStorage from create_pass responses so the Notify tab can
+// send pass_uuid directly to the worker, skipping the slow code→UUID lookup.
+let passCache = JSON.parse(sessionStorage.getItem('pqr_pass_cache') || '{}');
+function savePassCache(){ sessionStorage.setItem('pqr_pass_cache', JSON.stringify(passCache)); }
+function rememberPass(pass, holderName){
+  if (!pass.code || !pass.id) return;
+  passCache[pass.code.toUpperCase()] = { uuid: pass.id, name: holderName || '—', createdAt: Date.now() };
+  savePassCache();
+}
+
 let zones=JSON.parse(sessionStorage.getItem('pqr_zones')||'[]');
 function saveZones(){sessionStorage.setItem('pqr_zones',JSON.stringify(zones));}
 
@@ -381,6 +399,7 @@ function switchTab(tabId){
   document.querySelectorAll('.tab-btn,.bnav-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===tabId));
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active',p.id==='tab-'+tabId));
   if(tabId==='geofence')setTimeout(initSimMap,50);
+  if(tabId==='notify')renderRecentPasses();
 }
 document.querySelectorAll('.tab-btn,.bnav-btn').forEach(btn=>btn.addEventListener('click',()=>switchTab(btn.dataset.tab)));
 
@@ -448,6 +467,7 @@ document.getElementById('create-btn').addEventListener('click',async()=>{
   if(coords){const[la,ln]=coords.split(',').map(Number);if(!isNaN(la)&&!isNaN(ln))locs=[{latitude:la,longitude:ln,radius:parseInt(document.getElementById('geo-radius').value)||200,message:`Welcome, ${name}!`}];}
   try{
     const pass=await apiCall('POST','/api/passes',{template_id:TEMPLATE_ID,holder_name:name,holder_email:email,data:{locations:locs}});
+    rememberPass(pass, name);
     if(locs.length){const{latitude:la,longitude:ln,radius:r}=locs[0];zones.push({id:pass.code||pass.id,name,code:pass.code||pass.id,lat:la,lng:ln,radius:r,msg:`Welcome, ${name}!`});saveZones();renderZoneList();}
     showSuccess(pass,locs.length>0);
   }catch(e){toast('Error: '+e.message,'error');}
@@ -488,6 +508,16 @@ document.getElementById('push-images-btn').addEventListener('click',async()=>{
   btn.innerHTML='Push to Template →';btn.disabled=false;
 });
 
+// ── Notify: prefer cached UUID for instant push, fall back to code lookup ────
+function renderRecentPasses(){
+  const wrap=document.getElementById('recent-passes-wrap');
+  const list=document.getElementById('recent-passes');
+  const codes=Object.keys(passCache).sort((a,b)=>passCache[b].createdAt-passCache[a].createdAt).slice(0,5);
+  if(!codes.length){wrap.style.display='none';return;}
+  wrap.style.display='block';
+  list.innerHTML=codes.map(code=>`<div class="recent-pass" onclick="document.getElementById('notify-code').value='${code}'"><span class="code">${code}</span><span class="name">${escHtml(passCache[code].name)}</span></div>`).join('');
+}
+
 document.getElementById('notify-btn').addEventListener('click',async()=>{
   const code=document.getElementById('notify-code').value.trim().toUpperCase();
   const title=document.getElementById('notify-title').value.trim();
@@ -496,14 +526,17 @@ document.getElementById('notify-btn').addEventListener('click',async()=>{
   if(!msg){toast('Message required','error');return;}
   const btn=document.getElementById('notify-btn');btn.innerHTML='<span class="spinner"></span>';btn.disabled=true;
   try{
-    const res=await apiCall('POST','/api/notify',{pass_id:code,title,message:msg});
+    const cached=passCache[code];
+    const body={title,message:msg};
+    if(cached){body.pass_uuid=cached.uuid;}
+    else      {body.pass_id=code;}
+    const res=await apiCall('POST','/api/notify',body);
     const attempted=res.attempted??0;
     toast(attempted>0?`Push sent to ${attempted} device(s) ✓`:'Push sent (no registered devices yet)','success');
     document.getElementById('notify-message').value='';
   }catch(e){
-    // Surface Pro plan message clearly
-    const msg402=e.message.includes('Pro plan')||e.message.includes('plan_not_supported');
-    toast(msg402?'Pro plan required for push notifications':('Error: '+e.message),'error');
+    const isPro=e.message.includes('Pro plan')||e.message.includes('plan_not_supported');
+    toast(isPro?'Pro plan required for push notifications':('Error: '+e.message),'error');
   }
   btn.innerHTML='Send Push →';btn.disabled=false;
 });
