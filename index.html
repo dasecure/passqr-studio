@@ -1,4 +1,397 @@
-// ─── Hardcoded demo defaults — no settings required ───────────────────────────
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PassQR Studio — Demo Pass Creator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+:root{--bg:#070B14;--surface:#0D1221;--surface2:#131828;--border:#1C2540;--border2:#263055;--text:#E2E8F4;--muted:#5A6A8E;--accent:#4F7EFF;--accent2:#7B9FFF;--green:#00D68F;--red:#FF4D6D;--amber:#FFB347;--font-sans:'DM Sans',sans-serif;--font-mono:'JetBrains Mono',monospace;--font-disp:'Syne',sans-serif;--radius:10px;--shadow:0 4px 24px rgba(0,0,0,0.4);}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{font-size:15px;scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-sans);min-height:100vh;line-height:1.6;-webkit-font-smoothing:antialiased;}
+::-webkit-scrollbar{width:6px;}::-webkit-scrollbar-track{background:var(--surface);}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+header{position:sticky;top:0;z-index:100;background:rgba(7,11,20,0.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;height:56px;}
+.logo{font-family:var(--font-disp);font-size:1.05rem;font-weight:800;color:var(--text);text-decoration:none;display:flex;align-items:center;gap:8px;margin-right:32px;white-space:nowrap;}
+.logo-mark{width:28px;height:28px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:0.8rem;}
+nav{display:flex;gap:2px;flex:1;}
+.tab-btn{padding:6px 16px;background:none;border:none;cursor:pointer;color:var(--muted);font-family:var(--font-sans);font-size:0.88rem;font-weight:500;border-radius:var(--radius);transition:all 0.15s ease;position:relative;}
+.tab-btn:hover{color:var(--text);background:var(--surface);}
+.tab-btn.active{color:var(--accent2);background:rgba(79,126,255,0.1);}
+.tab-btn.active::after{content:'';position:absolute;bottom:-1px;left:16px;right:16px;height:2px;background:var(--accent);border-radius:2px;}
+.header-actions{display:flex;gap:8px;align-items:center;margin-left:auto;}
+.demo-badge{display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:0.68rem;text-transform:uppercase;letter-spacing:0.06em;padding:4px 10px;border-radius:20px;background:rgba(0,214,143,0.1);color:var(--green);border:1px solid rgba(0,214,143,0.25);}
+main{max-width:1120px;margin:0 auto;padding:32px 24px 80px;}
+.tab-panel{display:none;}.tab-panel.active{display:block;}
+.grid-2{display:grid;grid-template-columns:1fr 400px;gap:24px;align-items:start;}
+@media(max-width:900px){.grid-2{grid-template-columns:1fr;}}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+.card-header{padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+.card-header h3{font-family:var(--font-disp);font-size:0.9rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);}
+.card-body{padding:20px;}
+.field{margin-bottom:16px;}.field:last-child{margin-bottom:0;}
+label{display:block;margin-bottom:6px;font-size:0.82rem;font-weight:500;color:var(--muted);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.06em;}
+label .req{color:var(--accent);margin-left:3px;}
+input[type="text"],input[type="email"],input[type="number"],textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font-sans);font-size:0.92rem;padding:10px 14px;transition:border-color 0.15s,box-shadow 0.15s;outline:none;appearance:none;}
+input:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(79,126,255,0.15);}
+textarea{resize:vertical;min-height:80px;line-height:1.5;}
+.input-group{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.upload-zone{border:2px dashed var(--border2);border-radius:10px;padding:20px;text-align:center;cursor:pointer;transition:all 0.2s;}
+.upload-zone:hover{border-color:var(--accent);background:rgba(79,126,255,0.04);}
+.upload-zone input{display:none;}
+.upload-zone img{max-height:60px;max-width:100%;border-radius:6px;object-fit:contain;margin-bottom:8px;}
+.upload-label{font-size:0.82rem;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:6px;}
+.upload-label strong{color:var(--accent);font-size:0.88rem;}
+.upload-meta{font-family:var(--font-mono);font-size:0.7rem;}
+.img-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+#map{height:220px;border-radius:8px;overflow:hidden;border:1px solid var(--border);margin-bottom:12px;}
+.geo-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;}
+.pass-preview-wrap{position:sticky;top:72px;}
+.pass-flip-container{perspective:1000px;height:220px;margin-bottom:14px;}
+.pass-card{width:100%;height:220px;position:relative;transform-style:preserve-3d;transition:transform 0.6s cubic-bezier(0.4,0,0.2,1);}
+.pass-card.flipped{transform:rotateY(180deg);}
+.pass-front,.pass-back{position:absolute;inset:0;backface-visibility:hidden;border-radius:16px;overflow:hidden;}
+.pass-front{background:linear-gradient(135deg,#1F3A5F 0%,#0F2040 100%);display:flex;flex-direction:column;padding:20px;box-shadow:0 8px 40px rgba(0,0,0,0.5),0 0 0 1px rgba(255,255,255,0.07);}
+.pass-back{background:var(--surface);border:1px solid var(--border2);transform:rotateY(180deg);padding:20px;display:flex;flex-direction:column;gap:8px;box-shadow:0 8px 40px rgba(0,0,0,0.5);}
+.pass-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:auto;}
+.pass-logo{width:40px;height:40px;border-radius:8px;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:1.2rem;overflow:hidden;}
+.pass-logo img{width:100%;height:100%;object-fit:contain;}
+.pass-type{font-family:var(--font-mono);font-size:0.62rem;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.1em;text-align:right;}
+.pass-strip{height:50px;margin:8px -20px;background:rgba(255,255,255,0.06);overflow:hidden;}
+.pass-strip img{width:100%;height:100%;object-fit:cover;opacity:0.7;}
+.pass-name{font-family:var(--font-disp);font-size:1.2rem;font-weight:700;color:#fff;margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pass-sub{font-family:var(--font-mono);font-size:0.68rem;color:rgba(255,255,255,0.5);}
+.pass-tier{display:inline-block;background:rgba(79,126,255,0.25);border:1px solid rgba(79,126,255,0.4);color:var(--accent2);font-family:var(--font-mono);font-size:0.65rem;font-weight:500;text-transform:uppercase;letter-spacing:0.07em;padding:2px 8px;border-radius:4px;margin-top:4px;}
+.pass-expiry{font-family:var(--font-mono);font-size:0.65rem;color:var(--red);text-align:right;}
+.pass-qr-icon{width:44px;height:44px;background:rgba(255,255,255,0.9);border-radius:6px;align-self:flex-end;display:flex;align-items:center;justify-content:center;font-size:1.6rem;}
+.back-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);}
+.back-row:last-child{border-bottom:none;}
+.back-key{font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);text-transform:uppercase;}
+.back-val{font-size:0.8rem;color:var(--text);font-weight:500;text-align:right;max-width:60%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pass-actions{display:flex;gap:8px;}
+.flip-btn{flex:1;padding:9px;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;cursor:pointer;color:var(--muted);font-size:0.82rem;font-family:var(--font-sans);transition:all 0.15s;}
+.flip-btn:hover{color:var(--text);border-color:var(--accent);}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 22px;border-radius:9px;border:none;cursor:pointer;font-family:var(--font-sans);font-size:0.9rem;font-weight:500;transition:all 0.15s ease;text-decoration:none;}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-primary:hover{background:var(--accent2);box-shadow:0 0 20px rgba(79,126,255,0.35);}
+.btn-primary:active{transform:scale(0.98);}
+.btn-outline{background:transparent;border:1px solid var(--border2);color:var(--text);}
+.btn-outline:hover{border-color:var(--accent);color:var(--accent2);}
+.btn-ghost{background:var(--surface2);border:1px solid var(--border);color:var(--muted);}
+.btn-ghost:hover{color:var(--text);border-color:var(--border2);}
+.btn-lg{padding:14px 32px;font-size:1rem;border-radius:12px;}
+.btn-sm{padding:7px 14px;font-size:0.82rem;border-radius:7px;}
+.btn-full{width:100%;}
+.create-cta{margin-top:24px;padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:14px;display:flex;align-items:center;justify-content:space-between;gap:20px;}
+.create-cta-info{font-size:0.85rem;color:var(--muted);}
+.create-cta-info strong{display:block;color:var(--text);font-size:0.95rem;margin-bottom:2px;}
+.expiry-badge{display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:0.72rem;color:var(--amber);background:rgba(255,179,71,0.1);border:1px solid rgba(255,179,71,0.25);padding:2px 8px;border-radius:4px;margin-top:4px;}
+.modal-overlay{position:fixed;inset:0;z-index:1000;background:rgba(7,11,20,0.85);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.2s;}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:18px;width:min(560px,calc(100vw - 32px));max-height:90vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,0.6);transform:translateY(16px) scale(0.98);transition:transform 0.2s;}
+.modal-overlay.open .modal{transform:none;}
+.modal-head{padding:22px 24px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.modal-head h2{font-family:var(--font-disp);font-size:1.05rem;font-weight:700;}
+.success-content{text-align:center;padding:32px 24px;}
+.success-sub{color:var(--muted);font-size:0.88rem;margin-bottom:24px;}
+#qr-img{width:220px;height:220px;margin:0 auto 20px;display:block;border-radius:12px;padding:12px;background:#fff;}
+.wallet-links{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;}
+.wallet-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:12px 16px;border-radius:10px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);text-decoration:none;font-size:0.85rem;font-weight:500;transition:all 0.15s;}
+.wallet-btn:hover{border-color:var(--accent);background:rgba(79,126,255,0.08);color:var(--accent2);}
+.public-url-row{display:flex;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;align-items:center;margin-bottom:16px;}
+.public-url-row span{flex:1;font-family:var(--font-mono);font-size:0.75rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pass-code-display{font-family:var(--font-mono);font-size:1.1rem;font-weight:500;color:var(--green);letter-spacing:0.1em;margin-bottom:8px;}
+.desktop-hint{background:rgba(79,126,255,0.08);border:1px solid rgba(79,126,255,0.2);border-radius:8px;padding:10px 14px;font-size:0.82rem;color:var(--accent2);margin-bottom:16px;}
+.toast{position:fixed;bottom:24px;right:24px;z-index:2000;padding:12px 20px;background:var(--surface);border:1px solid var(--border2);border-radius:10px;display:flex;align-items:center;gap:10px;font-size:0.88rem;box-shadow:var(--shadow);transform:translateY(100px);opacity:0;transition:all 0.3s cubic-bezier(0.34,1.56,0.64,1);max-width:380px;}
+.toast.show{transform:none;opacity:1;}
+.toast.success{border-color:rgba(0,214,143,0.4);}
+.toast.error{border-color:rgba(255,77,109,0.4);}
+.toast .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.toast.success .dot{background:var(--green);}
+.toast.error .dot{background:var(--red);}
+.spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.notify-wrap{max-width:520px;margin:0 auto;}
+.pass-code-input{font-family:var(--font-mono)!important;letter-spacing:0.05em;font-size:1rem!important;text-transform:uppercase;}
+.divider{height:1px;background:var(--border);margin:20px 0;}
+.helper{font-size:0.78rem;color:var(--muted);margin-top:5px;}
+.badge{display:inline-flex;align-items:center;gap:4px;font-family:var(--font-mono);font-size:0.68rem;text-transform:uppercase;letter-spacing:0.06em;padding:3px 8px;border-radius:4px;}
+.badge-info{background:rgba(79,126,255,0.12);color:var(--accent2);border:1px solid rgba(79,126,255,0.2);}
+.section-title{font-family:var(--font-disp);font-size:0.82rem;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:14px;margin-top:4px;display:flex;align-items:center;gap:8px;}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border);}
+.leaflet-container{background:#0d1221;}
+.leaflet-tile{filter:brightness(0.7) invert(1) hue-rotate(200deg) saturate(0.4) brightness(0.8);}
+.leaflet-control-attribution{background:rgba(13,18,33,0.8)!important;color:var(--muted)!important;font-size:0.65rem!important;}
+.leaflet-control-zoom a{background:var(--surface2)!important;color:var(--text)!important;border-color:var(--border)!important;}
+</style>
+</head>
+<body>
+<header>
+  <a class="logo" href="#"><div class="logo-mark">🎫</div>PassQR Studio</a>
+  <nav>
+    <button class="tab-btn active" data-tab="create">Create Pass</button>
+    <button class="tab-btn" data-tab="notify">Notify</button>
+    <button class="tab-btn" data-tab="images">Images</button>
+  </nav>
+  <div class="header-actions"><span class="demo-badge">✦ Live Demo</span></div>
+</header>
+<main>
+  <div id="tab-create" class="tab-panel active">
+    <div class="grid-2">
+      <div>
+        <div class="card" style="margin-bottom:20px">
+          <div class="card-header"><h3>Holder Details</h3></div>
+          <div class="card-body">
+            <div class="input-group">
+              <div class="field"><label>Full Name <span class="req">*</span></label><input type="text" id="holder-name" placeholder="e.g. Tan Ah Kow" /></div>
+              <div class="field"><label>Email <span class="req">*</span></label><input type="email" id="holder-email" placeholder="tan@example.com" /></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>Geo-fence</h3><span class="badge badge-info" style="margin-left:auto">Optional</span></div>
+          <div class="card-body">
+            <p class="helper" style="margin-bottom:12px">Click the map or search to place a geo-fence.</p>
+            <div class="field">
+              <label>Search Address</label>
+              <div style="display:flex;gap:8px"><input type="text" id="geo-address" placeholder="e.g. 1 Raffles Place, Singapore" /><button class="btn btn-ghost btn-sm" id="geo-search-btn" style="white-space:nowrap">Search</button></div>
+            </div>
+            <div id="map"></div>
+            <div class="geo-row">
+              <div class="field" style="margin-bottom:0"><label>Lat, Lng</label><input type="text" id="geo-coords" placeholder="1.2840, 103.8510" readonly /></div>
+              <div class="field" style="margin-bottom:0"><label>Radius (m)</label><input type="number" id="geo-radius" value="200" min="50" max="5000" style="width:100px" /></div>
+            </div>
+            <p class="helper" id="geo-hint">No location set.</p>
+          </div>
+        </div>
+      </div>
+      <div class="pass-preview-wrap">
+        <div class="card">
+          <div class="card-header"><h3>Live Preview</h3></div>
+          <div class="card-body">
+            <div class="pass-flip-container">
+              <div class="pass-card" id="pass-card">
+                <div class="pass-front">
+                  <div class="pass-header">
+                    <div class="pass-logo" id="prev-logo">🎫</div>
+                    <div><div class="pass-type">Demo Pass</div><div class="pass-expiry">⏱ 24h</div></div>
+                  </div>
+                  <div class="pass-strip" id="prev-strip"></div>
+                  <div class="pass-name" id="prev-name">Your Name</div>
+                  <div class="pass-sub" id="prev-email">email@example.com</div>
+                  <div class="pass-tier">Demo</div>
+                  <div style="display:flex;justify-content:flex-end;margin-top:8px"><div class="pass-qr-icon">▦</div></div>
+                </div>
+                <div class="pass-back">
+                  <div class="back-row"><span class="back-key">Holder</span><span class="back-val" id="back-name">—</span></div>
+                  <div class="back-row"><span class="back-key">Email</span><span class="back-val" id="back-email">—</span></div>
+                  <div class="back-row"><span class="back-key">Expires</span><span class="back-val" id="back-expiry">—</span></div>
+                  <div class="back-row"><span class="back-key">Location</span><span class="back-val" id="back-geo">Not set</span></div>
+                  <div class="back-row"><span class="back-key">Interested?</span><span class="back-val"><a href="interest.html" target="_blank" style="color:var(--accent2);font-size:0.75rem">Learn more →</a></span></div>
+                </div>
+              </div>
+            </div>
+            <div class="pass-actions"><button class="flip-btn" id="flip-btn">⟳ Flip</button></div>
+          </div>
+        </div>
+        <div class="create-cta">
+          <div class="create-cta-info"><strong>Ready to issue?</strong><div class="expiry-badge">⏱ Auto-expires in 24 hours</div></div>
+          <button class="btn btn-primary btn-lg" id="create-btn"><span id="create-btn-text">Create Pass →</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-notify" class="tab-panel">
+    <div class="notify-wrap">
+      <div class="card">
+        <div class="card-header"><h3>Send Pass Notification</h3></div>
+        <div class="card-body">
+          <p class="helper" style="margin-bottom:20px">Push a message to a specific wallet pass.</p>
+          <div class="field"><label>Pass Code <span class="req">*</span></label><input type="text" id="notify-code" class="pass-code-input" placeholder="PASS-XXXXXXXX" /></div>
+          <div class="field"><label>Title</label><input type="text" id="notify-title" placeholder="e.g. Service Reminder" /></div>
+          <div class="field"><label>Message <span class="req">*</span></label><textarea id="notify-message" placeholder="e.g. Your service visit is tomorrow at 10am."></textarea></div>
+          <button class="btn btn-primary btn-full" id="notify-btn">Send Notification →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-images" class="tab-panel">
+    <div class="card" style="max-width:640px">
+      <div class="card-header"><h3>Template Images</h3></div>
+      <div class="card-body">
+        <p class="helper" style="margin-bottom:20px">Upload images — changes push to all existing passes automatically.</p>
+        <div class="img-grid">
+          <div><p class="section-title">Logo</p><div class="upload-zone" onclick="triggerUpload('logo')"><input type="file" id="upload-logo" accept="image/*" onchange="handleImageUpload(this,'logo')" /><div id="logo-preview"><div class="upload-label"><span style="font-size:1.5rem">🖼️</span><strong>Upload Logo</strong><span class="upload-meta">PNG · 480×480</span></div></div></div></div>
+          <div><p class="section-title">Icon</p><div class="upload-zone" onclick="triggerUpload('icon')"><input type="file" id="upload-icon" accept="image/*" onchange="handleImageUpload(this,'icon')" /><div id="icon-preview"><div class="upload-label"><span style="font-size:1.5rem">🟦</span><strong>Upload Icon</strong><span class="upload-meta">PNG · 87×87</span></div></div></div></div>
+          <div><p class="section-title">Strip</p><div class="upload-zone" onclick="triggerUpload('strip')"><input type="file" id="upload-strip" accept="image/*" onchange="handleImageUpload(this,'strip')" /><div id="strip-preview"><div class="upload-label"><span style="font-size:1.5rem">🖼️</span><strong>Upload Strip</strong><span class="upload-meta">PNG · 1125×432</span></div></div></div></div>
+        </div>
+        <div class="divider"></div>
+        <div style="display:flex;gap:10px;justify-content:flex-end">
+          <button class="btn btn-ghost btn-sm" onclick="clearImages()">Clear All</button>
+          <button class="btn btn-primary" id="push-images-btn">Push to Template →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="modal-overlay" id="success-modal">
+  <div class="modal">
+    <div class="modal-head"><h2>🎉 Pass Created!</h2><button class="btn btn-ghost btn-sm" onclick="closeSuccess()">✕</button></div>
+    <div class="success-content">
+      <div class="desktop-hint" id="desktop-hint" style="display:none">📱 <strong>On desktop?</strong> Scan the QR with your phone.</div>
+      <img id="qr-img" src="" alt="QR Code" />
+      <div class="pass-code-display" id="result-code">—</div>
+      <p class="success-sub">Expires in 24 hours · Share via:</p>
+      <div class="public-url-row"><span id="result-url">—</span><button class="btn btn-ghost btn-sm" onclick="copyUrl()">Copy</button></div>
+      <div class="wallet-links">
+        <a id="apple-link" href="#" target="_blank" class="wallet-btn">🍎 Apple Wallet</a>
+        <a id="google-link" href="#" target="_blank" class="wallet-btn">🔵 Google Wallet</a>
+      </div>
+      <a id="whatsapp-link" href="#" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:12px">📲 Share via WhatsApp</a>
+      <button class="btn btn-ghost btn-sm btn-full" onclick="closeSuccess()">Done</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><div class="dot"></div><span id="toast-msg"></span></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ─── Demo config — no user input required ────────────────────────────────────
 const WORKER_URL  = 'https://passqr-studio-worker.vincent-513.workers.dev';
 const TEMPLATE_ID = 'de23a11e-a369-4d07-8f72-2df7cb1b0d87';
 // ─────────────────────────────────────────────────────────────────────────────
+
+const expiryStr=(()=>{const d=new Date(Date.now()+24*60*60*1000);return d.toLocaleDateString('en-SG',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});})();
+document.getElementById('back-expiry').textContent=expiryStr;
+
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+  });
+});
+
+document.getElementById('holder-name').addEventListener('input',e=>{const v=e.target.value||'Your Name';document.getElementById('prev-name').textContent=v;document.getElementById('back-name').textContent=v;});
+document.getElementById('holder-email').addEventListener('input',e=>{const v=e.target.value||'email@example.com';document.getElementById('prev-email').textContent=v;document.getElementById('back-email').textContent=v;});
+document.getElementById('flip-btn').addEventListener('click',()=>document.getElementById('pass-card').classList.toggle('flipped'));
+
+let map,marker,circle;
+function initMap(){
+  map=L.map('map').setView([1.3521,103.8198],12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(map);
+  map.on('click',e=>setGeoFence(e.latlng.lat,e.latlng.lng));
+}
+function setGeoFence(lat,lng){
+  if(marker)map.removeLayer(marker);if(circle)map.removeLayer(circle);
+  const r=parseInt(document.getElementById('geo-radius').value)||200;
+  marker=L.circleMarker([lat,lng],{color:'#4F7EFF',fillColor:'#4F7EFF',fillOpacity:0.8,radius:8}).addTo(map);
+  circle=L.circle([lat,lng],{color:'#4F7EFF',fillColor:'#4F7EFF',fillOpacity:0.08,weight:1.5,radius:r}).addTo(map);
+  document.getElementById('geo-coords').value=`${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+  document.getElementById('geo-hint').textContent=`📍 ${lat.toFixed(4)}, ${lng.toFixed(4)} · ${r}m`;
+  document.getElementById('back-geo').textContent=`${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+}
+document.getElementById('geo-radius').addEventListener('change',()=>{const c=document.getElementById('geo-coords').value;if(c&&circle){const[la,ln]=c.split(',').map(Number);setGeoFence(la,ln);}});
+document.getElementById('geo-search-btn').addEventListener('click',async()=>{
+  const q=document.getElementById('geo-address').value.trim();if(!q)return;
+  const btn=document.getElementById('geo-search-btn');btn.textContent='…';btn.disabled=true;
+  try{const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`);const d=await r.json();if(d.length){map.setView([d[0].lat,d[0].lon],16);setGeoFence(parseFloat(d[0].lat),parseFloat(d[0].lon));}else toast('Not found','error');}
+  catch{toast('Geocoding failed','error');}
+  btn.textContent='Search';btn.disabled=false;
+});
+
+const images={logo:null,icon:null,strip:null};
+function triggerUpload(t){document.getElementById('upload-'+t).click();}
+function handleImageUpload(input,type){
+  const file=input.files[0];if(!file)return;
+  const r=new FileReader();
+  r.onload=e=>{
+    images[type]=e.target.result;
+    document.getElementById(type+'-preview').innerHTML=`<img src="${e.target.result}" style="max-height:70px;object-fit:contain;border-radius:6px;margin-bottom:4px"/><div class="upload-label"><span class="upload-meta">${file.name}</span></div>`;
+    if(type==='logo')document.getElementById('prev-logo').innerHTML=`<img src="${e.target.result}"/>`;
+    if(type==='strip')document.getElementById('prev-strip').innerHTML=`<img src="${e.target.result}"/>`;
+  };
+  r.readAsDataURL(file);
+}
+function clearImages(){
+  Object.keys(images).forEach(k=>{images[k]=null;});
+  ['logo','icon','strip'].forEach(t=>{document.getElementById(t+'-preview').innerHTML='<div class="upload-label"><span style="font-size:1.5rem">🖼️</span><strong>Upload '+t[0].toUpperCase()+t.slice(1)+'</strong></div>';document.getElementById('upload-'+t).value='';});
+  document.getElementById('prev-logo').innerHTML='🎫';document.getElementById('prev-strip').innerHTML='';
+}
+
+async function apiCall(method,path,body){
+  const res=await fetch(WORKER_URL+path,{method,headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
+  if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(typeof e.error==='string'?e.error:e.message||JSON.stringify(e)||`HTTP ${res.status}`);}
+  return res.json();
+}
+
+document.getElementById('create-btn').addEventListener('click',async()=>{
+  const name=document.getElementById('holder-name').value.trim();
+  const email=document.getElementById('holder-email').value.trim();
+  if(!name){toast('Full name is required','error');return;}
+  if(!email){toast('Email is required','error');return;}
+  const btn=document.getElementById('create-btn');const t=document.getElementById('create-btn-text');
+  btn.disabled=true;t.innerHTML='<span class="spinner"></span> Creating…';
+  const coords=document.getElementById('geo-coords').value;
+  let locs=[];
+  if(coords){const[la,ln]=coords.split(',').map(Number);if(!isNaN(la)&&!isNaN(ln))locs=[{latitude:la,longitude:ln,radius:parseInt(document.getElementById('geo-radius').value)||200,message:`Welcome, ${name}!`}];}
+  try{
+    const pass=await apiCall('POST','/api/passes',{template_id:TEMPLATE_ID,holder_name:name,holder_email:email,data:{locations:locs}});
+    showSuccess(pass);
+  }catch(e){toast('Error: '+e.message,'error');}
+  btn.disabled=false;t.textContent='Create Pass →';
+});
+
+function showSuccess(pass){
+  const code=pass.code||pass.id||'—';
+  const pub=`https://www.passqr.com/p/${code}`;
+  document.getElementById('result-code').textContent=code;
+  document.getElementById('result-url').textContent=pub;
+  document.getElementById('apple-link').href=`https://www.passqr.com/api/wallet/apple?code=${code}`;
+  document.getElementById('google-link').href=`https://www.passqr.com/api/wallet/google?code=${code}`;
+  document.getElementById('whatsapp-link').href=`https://wa.me/?text=${encodeURIComponent('Your demo wallet pass is ready: '+pub)}`;
+  document.getElementById('qr-img').src=`https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=10&color=070B14&bgcolor=FFFFFF&data=${encodeURIComponent(pub)}`;
+  document.getElementById('desktop-hint').style.display=/Mobi|Android|iPhone/i.test(navigator.userAgent)?'none':'block';
+  document.getElementById('success-modal').classList.add('open');
+}
+function closeSuccess(){document.getElementById('success-modal').classList.remove('open');}
+document.getElementById('success-modal').addEventListener('click',e=>{if(e.target===document.getElementById('success-modal'))closeSuccess();});
+function copyUrl(){navigator.clipboard.writeText(document.getElementById('result-url').textContent).then(()=>toast('Copied!','success'));}
+
+document.getElementById('push-images-btn').addEventListener('click',async()=>{
+  if(!images.logo&&!images.icon&&!images.strip){toast('Upload at least one image first','error');return;}
+  const btn=document.getElementById('push-images-btn');btn.innerHTML='<span class="spinner"></span> Pushing…';btn.disabled=true;
+  const u={};if(images.logo)u.logo_url=images.logo;if(images.icon)u.icon_url=images.icon;if(images.strip)u.strip_url=images.strip;
+  try{await apiCall('PATCH','/api/template',{template_id:TEMPLATE_ID,updates:u});toast('Images pushed ✓','success');}
+  catch(e){toast('Push failed: '+e.message,'error');}
+  btn.innerHTML='Push to Template →';btn.disabled=false;
+});
+
+document.getElementById('notify-btn').addEventListener('click',async()=>{
+  const code=document.getElementById('notify-code').value.trim().toUpperCase();
+  const title=document.getElementById('notify-title').value.trim();
+  const msg=document.getElementById('notify-message').value.trim();
+  if(!code){toast('Pass code required','error');return;}
+  if(!msg){toast('Message required','error');return;}
+  const btn=document.getElementById('notify-btn');btn.innerHTML='<span class="spinner"></span> Sending…';btn.disabled=true;
+  try{await apiCall('POST','/api/notify',{pass_id:code,title,message:msg});toast('Sent ✓','success');document.getElementById('notify-message').value='';}
+  catch(e){toast('Error: '+e.message,'error');}
+  btn.innerHTML='Send Notification →';btn.disabled=false;
+});
+
+let tt;
+function toast(msg,type='success'){
+  const el=document.getElementById('toast');el.className=`toast ${type}`;
+  document.getElementById('toast-msg').textContent=msg;el.classList.add('show');
+  clearTimeout(tt);tt=setTimeout(()=>el.classList.remove('show'),3200);
+}
+initMap();
+</script>
+</body>
+</html>
