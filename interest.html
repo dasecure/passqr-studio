@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PassQR — Get Early Access</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+:root{--bg:#FAFAF6;--surface:#FFFFFF;--text:#1A1A1A;--muted:#888;--border:#E5E5E0;--accent:#FF6B35;--accent2:#FF8C59;--green:#22C55E;--font:'DM Sans',sans-serif;--serif:'Instrument Serif',Georgia,serif;--mono:'JetBrains Mono',monospace;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{font-size:15px;}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;-webkit-font-smoothing:antialiased;line-height:1.6;}
+.page{min-height:100vh;display:grid;grid-template-columns:1fr 520px;}
+@media(max-width:860px){.page{grid-template-columns:1fr;}.hero{display:none;}}
+.hero{background:#1A1A1A;padding:48px 52px;display:flex;flex-direction:column;position:relative;overflow:hidden;}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 70% 60% at 30% 80%,rgba(255,107,53,0.2) 0%,transparent 60%);pointer-events:none;}
+.hero-logo{font-family:var(--mono);font-size:0.78rem;font-weight:500;color:rgba(255,255,255,0.5);letter-spacing:0.12em;text-transform:uppercase;display:flex;align-items:center;gap:8px;margin-bottom:auto;}
+.hero-logo-mark{width:24px;height:24px;background:var(--accent);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;}
+.hero-headline{font-family:var(--serif);font-size:clamp(2.2rem,4vw,3.4rem);line-height:1.12;font-weight:400;color:#FAFAF6;margin-bottom:20px;}
+.hero-headline em{color:var(--accent);font-style:italic;}
+.hero-sub{color:rgba(255,255,255,0.5);font-size:0.95rem;line-height:1.7;margin-bottom:40px;max-width:380px;}
+.features{list-style:none;margin-bottom:40px;display:flex;flex-direction:column;gap:10px;}
+.features li{display:flex;align-items:center;gap:10px;color:rgba(255,255,255,0.75);font-size:0.88rem;}
+.features li::before{content:'✦';color:var(--accent);font-size:0.65rem;flex-shrink:0;}
+.hero-quote{border-left:2px solid var(--accent);padding:12px 16px;font-family:var(--serif);font-style:italic;color:rgba(255,255,255,0.6);font-size:0.92rem;line-height:1.5;margin-top:auto;}
+.form-side{background:var(--surface);padding:52px 44px;display:flex;flex-direction:column;border-left:1px solid var(--border);}
+@media(max-width:860px){.form-side{padding:40px 24px;}}
+.form-side-logo{font-family:var(--mono);font-size:0.75rem;font-weight:500;color:var(--muted);letter-spacing:0.12em;text-transform:uppercase;display:none;align-items:center;gap:8px;margin-bottom:40px;}
+@media(max-width:860px){.form-side-logo{display:flex;}}
+.form-eyebrow{font-family:var(--mono);font-size:0.7rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.form-eyebrow::before{content:'';width:20px;height:2px;background:var(--accent);border-radius:1px;}
+.form-heading{font-family:var(--serif);font-size:2.2rem;line-height:1.15;font-weight:400;margin-bottom:6px;color:var(--text);}
+.form-heading em{font-style:italic;color:var(--accent);}
+.form-subhead{color:var(--muted);font-size:0.88rem;margin-bottom:36px;line-height:1.6;}
+.field{margin-bottom:18px;}
+label{display:block;margin-bottom:6px;font-size:0.8rem;font-weight:600;color:var(--text);letter-spacing:0.02em;}
+label .req{color:var(--accent);margin-left:2px;}
+input[type="text"],input[type="email"],input[type="tel"]{width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--font);font-size:0.95rem;padding:11px 16px;outline:none;transition:border-color 0.15s,box-shadow 0.15s;-webkit-appearance:none;}
+input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(255,107,53,0.12);background:#fff;}
+input::placeholder{color:#B8B8B2;}
+.checkbox-group{display:flex;gap:12px;flex-wrap:wrap;}
+.check-option{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;padding:10px 16px;border:1.5px solid var(--border);border-radius:10px;transition:all 0.15s;flex:1;min-width:120px;}
+.check-option:hover{border-color:var(--accent);background:rgba(255,107,53,0.04);}
+.check-option input{display:none;}
+.check-option .checkmark{width:18px;height:18px;border:2px solid var(--border);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;flex-shrink:0;transition:all 0.15s;}
+.check-option input:checked+.checkmark{background:var(--accent);border-color:var(--accent);color:#fff;}
+.check-option .check-label{font-size:0.88rem;font-weight:500;}
+.check-option.checked{border-color:var(--accent);background:rgba(255,107,53,0.05);}
+.submit-wrap{margin-top:28px;}
+.btn-submit{width:100%;padding:14px 24px;background:var(--accent);color:#fff;border:none;border-radius:12px;cursor:pointer;font-family:var(--font);font-size:1rem;font-weight:600;transition:all 0.15s ease;display:flex;align-items:center;justify-content:center;gap:8px;}
+.btn-submit:hover{background:var(--accent2);transform:translateY(-1px);box-shadow:0 6px 20px rgba(255,107,53,0.3);}
+.btn-submit:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
+.privacy-note{text-align:center;margin-top:12px;font-size:0.75rem;color:var(--muted);line-height:1.5;}
+.spinner{width:18px;height:18px;border:2px solid rgba(255,255,255,0.4);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+#success-view{display:none;text-align:center;padding:20px 0;animation:fadeUp 0.5s ease both;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:none;}}
+.success-circle{width:80px;height:80px;background:rgba(34,197,94,0.1);border:2px solid var(--green);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2rem;margin:0 auto 20px;animation:pop 0.4s cubic-bezier(0.34,1.56,0.64,1) both;}
+@keyframes pop{from{transform:scale(0);}to{transform:scale(1);}}
+.success-h{font-family:var(--serif);font-size:1.9rem;line-height:1.2;margin-bottom:10px;}
+.success-p{color:var(--muted);font-size:0.9rem;line-height:1.7;margin-bottom:28px;}
+.success-tag{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:0.72rem;text-transform:uppercase;letter-spacing:0.08em;background:rgba(255,107,53,0.08);color:var(--accent);border:1px solid rgba(255,107,53,0.2);padding:5px 12px;border-radius:20px;}
+.error-msg{background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.25);border-radius:8px;padding:10px 14px;color:#EF4444;font-size:0.82rem;margin-top:16px;display:none;}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="hero">
+    <div class="hero-logo"><div class="hero-logo-mark">🎫</div>PassQR by dasecure</div>
+    <h1 class="hero-headline">Your brand,<br/><em>inside</em> every<br/>customer's wallet.</h1>
+    <p class="hero-sub">PassQR lets any business issue digital wallet passes in minutes — no app required, no certificates to manage. Just a link.</p>
+    <ul class="features">
+      <li>Live on Apple Wallet &amp; Google Wallet instantly</li>
+      <li>Push updates to customer phones automatically</li>
+      <li>Geo-fenced notifications when customers arrive</li>
+      <li>QR scan verification on-site in seconds</li>
+      <li>REST API &amp; MCP server for AI-powered workflows</li>
+    </ul>
+    <div class="hero-quote">"Wallet passes are still novel in Singapore's security &amp; access-control industry — first mover advantage for operators who move now."<br/><br/>— PassQR × Sin Chew Alarm POC, April 2026</div>
+  </div>
+  <div class="form-side">
+    <div class="form-side-logo"><div class="hero-logo-mark" style="background:var(--accent);width:22px;height:22px;font-size:0.65rem">🎫</div>PassQR by dasecure</div>
+    <div id="form-view">
+      <p class="form-eyebrow">Early Access</p>
+      <h2 class="form-heading">Get <em>notified</em><br/>when we launch.</h2>
+      <p class="form-subhead">We're onboarding select businesses in Singapore. Leave your details and we'll reach out with early access details.</p>
+      <form id="interest-form" novalidate>
+        <div class="field"><label for="f-name">Full Name <span class="req">*</span></label><input type="text" id="f-name" name="full_name" placeholder="Tan Ah Kow" autocomplete="name" required /></div>
+        <div class="field"><label for="f-phone">Phone Number <span class="req">*</span></label><input type="tel" id="f-phone" name="phone" placeholder="+65 9123 4567" autocomplete="tel" required /></div>
+        <div class="field"><label for="f-email">Email Address <span class="req">*</span></label><input type="email" id="f-email" name="email" placeholder="you@company.com" autocomplete="email" required /></div>
+        <div class="field">
+          <p style="font-size:0.8rem;font-weight:600;margin-bottom:10px">Preferred Contact <span class="req">*</span></p>
+          <div class="checkbox-group">
+            <label class="check-option" id="opt-email"><input type="checkbox" name="pref_email" value="email" onchange="toggleCheck(this,'opt-email')" /><span class="checkmark">✓</span><span class="check-label">📧 Email</span></label>
+            <label class="check-option" id="opt-phone"><input type="checkbox" name="pref_phone" value="phone" onchange="toggleCheck(this,'opt-phone')" /><span class="checkmark">✓</span><span class="check-label">📱 Phone / WhatsApp</span></label>
+          </div>
+        </div>
+        <div id="error-msg" class="error-msg"></div>
+        <div class="submit-wrap">
+          <button type="submit" class="btn-submit" id="submit-btn"><span id="btn-text">Request Early Access →</span></button>
+          <p class="privacy-note">We respect your privacy. No spam, ever.<br/>Information collected under Singapore's PDPA.</p>
+        </div>
+      </form>
+    </div>
+    <div id="success-view">
+      <div class="success-circle">✓</div>
+      <h3 class="success-h">You're on the list!</h3>
+      <p class="success-p">Thanks for your interest. We'll be in touch shortly with early access details and next steps.</p>
+      <span class="success-tag">✦ Submission received</span>
+    </div>
+  </div>
+</div>
+<script>
+const params=new URLSearchParams(location.search);
+const SUPABASE_URL=params.get('sb_url')||'YOUR_SUPABASE_URL';
+const SUPABASE_KEY=params.get('sb_key')||'YOUR_SUPABASE_ANON_KEY';
+const FALLBACK_URL=params.get('fallback')||'';
+function toggleCheck(input,optId){document.getElementById(optId).classList.toggle('checked',input.checked);}
+document.getElementById('interest-form').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const name=document.getElementById('f-name').value.trim();
+  const phone=document.getElementById('f-phone').value.trim();
+  const email=document.getElementById('f-email').value.trim();
+  const prefEmail=document.querySelector('[name="pref_email"]').checked;
+  const prefPhone=document.querySelector('[name="pref_phone"]').checked;
+  const errEl=document.getElementById('error-msg');
+  errEl.style.display='none';
+  if(!name||!phone||!email){errEl.textContent='Please fill in all required fields.';errEl.style.display='block';return;}
+  if(!prefEmail&&!prefPhone){errEl.textContent='Please select at least one contact preference.';errEl.style.display='block';return;}
+  const btn=document.getElementById('submit-btn');
+  const btnText=document.getElementById('btn-text');
+  btn.disabled=true;btnText.innerHTML='<span class="spinner"></span>';
+  const payload={full_name:name,phone,email,comms_email:prefEmail,comms_phone:prefPhone,source_url:document.referrer||window.location.href,created_at:new Date().toISOString()};
+  try{
+    if(SUPABASE_URL!=='YOUR_SUPABASE_URL'){
+      const res=await fetch(`${SUPABASE_URL}/rest/v1/passqr_interest`,{method:'POST',headers:{'apikey':SUPABASE_KEY,'Authorization':`Bearer ${SUPABASE_KEY}`,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify(payload)});
+      if(!res.ok){const err=await res.json().catch(()=>({}));throw new Error(err.message||`HTTP ${res.status}`);}
+    }else if(FALLBACK_URL){
+      const res=await fetch(FALLBACK_URL,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(payload)});
+      if(!res.ok)throw new Error('Submission failed');
+    }else{console.log('Interest form (no backend):',payload);}
+    document.getElementById('form-view').style.display='none';
+    document.getElementById('success-view').style.display='block';
+  }catch(err){
+    errEl.textContent='Something went wrong: '+err.message+'. Please try again.';
+    errEl.style.display='block';btn.disabled=false;btnText.textContent='Request Early Access →';
+  }
+});
+</script>
+</body>
+</html>
