@@ -186,6 +186,15 @@ textarea{resize:vertical;min-height:80px;line-height:1.5;}
 .leaflet-tile{filter:brightness(0.7) invert(1) hue-rotate(200deg) saturate(0.4) brightness(0.8);}
 .leaflet-control-attribution{background:rgba(13,18,33,0.8)!important;color:var(--muted)!important;font-size:0.6rem!important;}
 .leaflet-control-zoom a{background:var(--surface2)!important;color:var(--text)!important;border-color:var(--border)!important;width:36px!important;height:36px!important;line-height:36px!important;}
+/* Locate-me control — sits below the zoom buttons in the top-right */
+.leaflet-control-locate{display:flex!important;align-items:center;justify-content:center;width:36px;height:36px;background:var(--surface2)!important;border:1px solid var(--border)!important;border-radius:6px!important;color:var(--text)!important;cursor:pointer;text-decoration:none;transition:all 0.15s;}
+.leaflet-control-locate:hover{background:var(--surface)!important;color:var(--accent2)!important;border-color:var(--accent)!important;}
+.leaflet-control-locate.locating{color:var(--accent2)!important;border-color:var(--accent)!important;}
+.leaflet-control-locate.locating svg{animation:locate-pulse 1.2s ease-in-out infinite;}
+.leaflet-control-locate.found{color:var(--accent2)!important;border-color:var(--accent)!important;}
+@keyframes locate-pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.4;transform:scale(0.85);}}
+/* "You are here" dot used on the create map */
+.user-location-dot{width:14px;height:14px;border-radius:50%;background:#4F7EFF;border:3px solid #fff;box-shadow:0 0 0 4px rgba(79,126,255,0.25),0 2px 8px rgba(0,0,0,0.4);}
 </style>
 </head>
 <body>
@@ -223,7 +232,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5;}
               <div class="field" style="margin-bottom:0"><label>Lat, Lng</label><input type="text" id="geo-coords" placeholder="1.284, 103.851" readonly /></div>
               <div class="field" style="margin-bottom:0"><label>Radius (m)</label><input type="number" id="geo-radius" value="200" min="50" max="5000" /></div>
             </div>
-            <p class="helper" id="geo-hint">No location set.</p>
+            <p class="helper" id="geo-hint">No location set. Tap map, search address, or use the 🎯 button to use your current location.</p>
           </div>
         </div>
       </div>
@@ -263,7 +272,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5;}
 
   <div id="tab-geofence" class="tab-panel">
     <div style="margin-bottom:16px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
-      <div><h2 style="font-family:var(--font-disp);font-size:1.2rem;font-weight:700;margin-bottom:3px">Geo-fence Simulator</h2><p style="color:var(--muted);font-size:0.82rem">Tap map or drag 🧑 into a zone to see the phone notification.</p></div>
+      <div><h2 style="font-family:var(--font-disp);font-size:1.2rem;font-weight:700;margin-bottom:3px">Geo-fence Simulator</h2><p style="color:var(--muted);font-size:0.82rem">Tap map, drag 🧑, or use 🎯 to jump to your real location.</p></div>
       <button class="btn btn-green btn-sm" id="walk-in-btn" style="display:none;white-space:nowrap">▶ Walk In</button>
     </div>
     <div class="sim-layout">
@@ -411,11 +420,77 @@ document.getElementById('holder-name').addEventListener('input',e=>{const v=e.ta
 document.getElementById('holder-email').addEventListener('input',e=>{const v=e.target.value||'email@example.com';document.getElementById('prev-email').textContent=v;document.getElementById('back-email').textContent=v;});
 document.getElementById('flip-btn').addEventListener('click',()=>document.getElementById('pass-card').classList.toggle('flipped'));
 
+// ── Locate-me Leaflet control ────────────────────────────────────────────────
+// Custom control with a crosshair icon. On click → browser geolocation →
+// callback with (lat, lng, accuracy). Handles permission/availability errors
+// with toast feedback. HTTPS-only (browser requirement).
+function addLocateControl(targetMap, onLocate){
+  const Locate = L.Control.extend({
+    options: { position: 'topright' },
+    onAdd: function(){
+      const btn = L.DomUtil.create('a', 'leaflet-control-locate');
+      btn.href = '#';
+      btn.title = 'Use my current location';
+      btn.setAttribute('role','button');
+      btn.setAttribute('aria-label','Use my current location');
+      btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>';
+      L.DomEvent.disableClickPropagation(btn);
+      L.DomEvent.disableScrollPropagation(btn);
+      L.DomEvent.on(btn, 'click', (e) => {
+        L.DomEvent.preventDefault(e);
+        if (!navigator.geolocation) { toast('Geolocation not supported by this browser','error'); return; }
+        if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+          toast('Geolocation needs HTTPS — open the site via https://','error'); return;
+        }
+        btn.classList.remove('found');
+        btn.classList.add('locating');
+        navigator.geolocation.getCurrentPosition(
+          pos => {
+            btn.classList.remove('locating');
+            btn.classList.add('found');
+            const { latitude:lat, longitude:lng, accuracy:acc } = pos.coords;
+            targetMap.flyTo([lat, lng], Math.max(targetMap.getZoom(), 16), { duration: 0.6 });
+            onLocate(lat, lng, acc);
+            toast(`Located you (±${Math.round(acc)}m) ✓`, 'success');
+          },
+          err => {
+            btn.classList.remove('locating');
+            const msg = err.code === 1 ? 'Location permission denied — allow in browser settings'
+                      : err.code === 2 ? 'Location unavailable — try moving to a window'
+                      : err.code === 3 ? 'Location request timed out — try again'
+                      : 'Could not get your location';
+            toast(msg, 'error');
+          },
+          { enableHighAccuracy:true, timeout:10000, maximumAge:30000 }
+        );
+      });
+      return btn;
+    },
+  });
+  new Locate().addTo(targetMap);
+}
+
+// Optional helper: render a "you are here" dot + accuracy ring.
+// Used on the create map (where the geo-fence circle sits separately).
+// Skipped on the simulator (the person marker IS the user).
+function showUserOnMap(targetMap, lat, lng, acc, layerRef){
+  if (layerRef.dot) targetMap.removeLayer(layerRef.dot);
+  if (layerRef.acc) targetMap.removeLayer(layerRef.acc);
+  layerRef.acc = L.circle([lat, lng], { radius: Math.max(acc || 50, 30), color:'#4F7EFF', fillColor:'#4F7EFF', fillOpacity:0.06, weight:1, interactive:false }).addTo(targetMap);
+  layerRef.dot = L.marker([lat, lng], { icon: L.divIcon({ className:'', html:'<div class="user-location-dot"></div>', iconSize:[14,14], iconAnchor:[7,7] }), interactive:false, zIndexOffset:500 }).addTo(targetMap);
+}
+
 let map,marker,circle;
+const createUserLayers = {};
 function initMap(){
   map=L.map('map',{zoomControl:true}).setView([1.3521,103.8198],12);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM',maxZoom:19}).addTo(map);
   map.on('click',e=>setGeoFence(e.latlng.lat,e.latlng.lng));
+  // Locate button: drops the geo-fence at the user's actual position
+  addLocateControl(map, (lat, lng, acc) => {
+    showUserOnMap(map, lat, lng, acc, createUserLayers);
+    setGeoFence(lat, lng);
+  });
 }
 function setGeoFence(lat,lng){
   if(marker)map.removeLayer(marker);if(circle)map.removeLayer(circle);
@@ -555,6 +630,12 @@ function initSimMap(){
   simPerson=L.marker([1.3521,103.8198],{icon:personIcon,draggable:true,zIndexOffset:1000}).addTo(simMap);
   simPerson.on('drag',checkZones);simPerson.on('dragend',checkZones);
   simMap.on('click',e=>{simPerson.setLatLng(e.latlng);checkZones();});
+  // Locate button: jumps the simulated person to the user's real position.
+  // No "you are here" dot needed — the person marker already represents you.
+  addLocateControl(simMap, (lat, lng) => {
+    simPerson.setLatLng([lat, lng]);
+    checkZones();
+  });
   renderSimZones();
 }
 function renderSimZones(){
