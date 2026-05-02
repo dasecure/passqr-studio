@@ -34,15 +34,16 @@ const params = new URLSearchParams(location.search);
 const code   = params.get('code') || '';
 
 // Apple Wallet → passqr.com Next.js route (creates signed .pkpass)
-// Google Wallet → Supabase edge function (signs save-to-wallet JWT)
+// Google Wallet → Supabase edge function `wallet-google` (multi-tenant JWT signer)
 //
 // Why two different hosts? They use independent credentials:
 //   • Apple uses signing certs configured on Vercel (the passqr.com host)
 //   • Google uses a service account JSON configured on Supabase
-// Pointing each platform at the host that has its credentials avoids the
-// "Google Wallet not configured" error on the Vercel side.
+// `wallet-google` resolves the right business + class definition from
+// businesses.config.google_wallet, so all three tenants (Aiphone, Sin Chew,
+// Studio demo) share one URL.
 const appleUrl  = `https://www.passqr.com/api/wallet/apple?code=${code}`;
-const googleUrl = `https://gyllfnsnniuqaarsulsk.supabase.co/functions/v1/passqr-demo-wallet?code=${code}`;
+const googleUrl = `https://gyllfnsnniuqaarsulsk.supabase.co/functions/v1/wallet-google?code=${code}`;
 const publicUrl = `https://www.passqr.com/p/${code}`;
 
 function isIOS(){
