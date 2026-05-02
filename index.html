@@ -388,10 +388,13 @@ const TEMPLATE_ID = 'de23a11e-a369-4d07-8f72-2df7cb1b0d87';
 const WALLET_REDIRECT = 'https://dasecure.github.io/passqr-studio/wallet.html';
 
 // Apple Wallet → passqr.com Next.js route (signed .pkpass via Vercel certs)
-// Google Wallet → Supabase edge function passqr-demo-wallet (signed JWT via Supabase secrets)
+// Google Wallet → Supabase edge function `wallet-google` (multi-tenant JWT signer via Supabase secrets)
 // Two hosts because each platform's credentials live in a different place.
+// `wallet-google` reads businesses.config to figure out which class definition,
+// branding, and origins apply to each pass — Aiphone, Sin Chew, and the Studio
+// demo all flow through this one URL.
 const APPLE_WALLET_BASE  = 'https://www.passqr.com/api/wallet/apple';
-const GOOGLE_WALLET_BASE = 'https://gyllfnsnniuqaarsulsk.supabase.co/functions/v1/passqr-demo-wallet';
+const GOOGLE_WALLET_BASE = 'https://gyllfnsnniuqaarsulsk.supabase.co/functions/v1/wallet-google';
 
 // ── Pass cache: code → { uuid, name, createdAt } ──────────────────────────────
 let passCache = JSON.parse(sessionStorage.getItem('pqr_pass_cache') || '{}');
